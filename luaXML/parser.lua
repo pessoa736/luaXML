@@ -1,4 +1,4 @@
-local tokenizer = require("luaXML.tokenizer")
+local elements = require("luaXML.elements")
 local insert = table.insert
 
 local function trim(str)
@@ -8,6 +8,129 @@ end
 local function leading_spaces(str)
   local prefix = str:match("^(%s*)")
   return prefix and #prefix or 0
+end
+
+local function parseAttributes(attrString)
+    attrString = attrString and trim(attrString) or ""
+    if attrString == "" then
+        return nil
+    end
+
+    local attrs = {}
+    local i, len = 1, #attrString
+
+    local function skipWhitespace()
+        while i <= len and attrString:sub(i, i):match("%s") do
+            i = i + 1
+        end
+    end
+
+    local function readName()
+        local start = i
+        while i <= len and attrString:sub(i, i):match("[-%w_:.]") do
+            i = i + 1
+        end
+        if start == i then
+            return nil
+        end
+        return attrString:sub(start, i - 1)
+    end
+
+    local function readValue()
+        if i > len then
+            return true
+        end
+
+        local ch = attrString:sub(i, i)
+
+        if ch == '"' or ch == "'" then
+            local quote = ch
+            i = i + 1
+            local start = i
+            while i <= len and attrString:sub(i, i) ~= quote do
+                i = i + 1
+            end
+            local value = attrString:sub(start, i - 1)
+            if attrString:sub(i, i) == quote then
+                i = i + 1
+            end
+            return value
+        elseif ch == '{' then
+            i = i + 1
+            local start = i
+            local depth = 1
+            while i <= len do
+                local current = attrString:sub(i, i)
+                if current == '{' then
+                    depth = depth + 1
+                elseif current == '}' then
+                    depth = depth - 1
+                    if depth == 0 then
+                        local value = attrString:sub(start, i - 1)
+                        i = i + 1
+                        value = trim(value)
+                        -- tentar avaliar expressão dentro das chaves com segurança
+                        local env = { math = math, tonumber = tonumber }
+                        local fn, loadErr = load("return " .. value, "attr", "t", env)
+                        if fn then
+                            local ok, result = pcall(fn)
+                            if ok then
+                                return result
+                            end
+                        end
+                        return value
+                    end
+                end
+                i = i + 1
+            end
+            local value = trim(attrString:sub(start))
+            local env = { math = math, tonumber = tonumber }
+            local fn, loadErr = load("return " .. value, "attr", "t", env)
+            if fn then
+                local ok, result = pcall(fn)
+                if ok then
+                    return result
+                end
+            end
+            return value
+        else
+            local start = i
+            while i <= len and not attrString:sub(i, i):match("%s") do
+                i = i + 1
+            end
+            return attrString:sub(start, i - 1)
+        end
+    end
+
+    while i <= len do
+        skipWhitespace()
+        if i > len then
+            break
+        end
+
+        local name = readName()
+        if not name then
+            break
+        end
+
+        skipWhitespace()
+        local value
+        if attrString:sub(i, i) == '=' then
+            i = i + 1
+            skipWhitespace()
+            value = readValue()
+        else
+            value = true
+        end
+
+        attrs[name] = value
+    end
+
+    if next(attrs) == nil then
+        return nil
+    end
+
+    return attrs
 end
 
 local function parseElement(code, globalStart)
@@ -28,7 +151,7 @@ local function parseElement(code, globalStart)
     -- nó base
     local node = {
         name = name,
-        attrs = attrs ~= "" and attrs or nil,
+        attrs = parseAttributes(attrs),
         children = {}
     }
 
@@ -37,7 +160,7 @@ local function parseElement(code, globalStart)
 
     -- se for <test .../>
     if selfClosed == "/" then
-        return tokenizer(node.name, node.attrs, {}), absoluteStart, absoluteEnd
+        return elements:createElement(node.name, node.attrs, {}), absoluteStart, absoluteEnd
     end
 
     -- agora precisamos achar o fechamento correspondente
@@ -97,7 +220,7 @@ local function parseElement(code, globalStart)
                     end
                 end
 
-                return tokenizer(node.name, node.attrs, node.children), absoluteStart, absoluteEnd
+                return elements:createElement(node.name, node.attrs, node.children), absoluteStart, absoluteEnd
             end
         end
     end

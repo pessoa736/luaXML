@@ -11,5 +11,7 @@ local function fcst(element)
     
     childrens = childrens .. "}"
  
-    return element.tag .. "(" .. element.props ..",".. childrens .. ")"
+    return element.tag .. "(" .. require("luaXML.tableToString")(element.props, false) ..",".. childrens .. ")"
 end
+
+return fcst
