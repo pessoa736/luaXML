@@ -22,6 +22,8 @@ local parser = setmetatable({},{
     __call = function (s, st)
     end
 })
+local tokens={}
+
 
 
 function parser.get_tag_full_body(s, str)
@@ -31,7 +33,6 @@ function parser.get_tag_full_body(s, str)
 
     local normalized = trim(str)
     local tokens = {}
-
     for tag, attr, children in gmatch(normalized, "<(%w+)([^>]*)>%s*(.-)%s*</%1>") do
         local props = parse_props(attr or "")
         local nested = s.get_tag_full_body(s, children)
