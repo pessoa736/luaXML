@@ -3,4 +3,8 @@ return function (dirFile)
     local file <close> = io.open(dirFile, "r+")
     if not file then
         error("não foi possivel abrir o arquivo: ".. dirFile)
-    end                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+    end
+
+    local content = file:read("a")
+    return content
+end
