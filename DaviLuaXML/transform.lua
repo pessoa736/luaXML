@@ -1,5 +1,5 @@
 --[[
-    luaXML Transform
+    DaviLuaXML Transform
     =================
     
     Módulo responsável por transformar código Lua contendo sintaxe XML
@@ -32,14 +32,15 @@
     
     USO:
     ----
-    local transform = require("luaXML.transform")
+    local transform = require("DaviLuaXML.transform")
     local codigo_lua = transform.transform(codigo_lx)
     
     Exporta uma tabela com a funcao transform
 --]]
 
-local parser = require("luaXML.parser")
-local fcst = require("luaXML.functionCallToStringTransformer")
+local parser = require("DaviLuaXML.parser")
+local fcst = require("DaviLuaXML.functionCallToStringTransformer")
+local errors = require("DaviLuaXML.errors")
 
 --------------------------------------------------------------------------------
 -- FUNÇÕES AUXILIARES
@@ -124,22 +125,28 @@ end
 --- Substitui todas as tags XML por chamadas de função equivalentes.
 ---
 --- @param code string Código fonte contendo tags XML
+--- @param filename string|nil Nome do arquivo (para mensagens de erro)
 --- @return string Código Lua puro com as tags substituídas por chamadas de função
+--- @return string|nil Mensagem de erro (se houver)
 ---
 --- Exemplo:
 ---   transform_code('<btn onClick={handler}>Clique</btn>')
 ---   -- Retorna: 'btn({onClick = handler}, {"Clique"})'
-local function transform_code(code)
+local function transform_code(code, filename)
   local pos = 1
+  local originalCode = code
   
   while true do
     -- Encontrar próximo elemento
     local openStart, tagName, element = find_next_element(code, pos)
-    if not openStart then break end
+    if not openStart or not element then break end
     
     -- Localizar extensão completa da tag
     local s, tagEnd = locate_full_tag(code, openStart)
-    if not s then break end
+    if not s then 
+      -- Calcular posição no código original para erro
+      return nil, errors.unclosedTag(tagName, originalCode, openStart, filename)
+    end
     
     -- Converter elemento em chamada de função
     local callStr = fcst(element)
@@ -151,7 +158,7 @@ local function transform_code(code)
     pos = s + #callStr
   end
   
-  return code
+  return code, nil
 end
 
 --------------------------------------------------------------------------------

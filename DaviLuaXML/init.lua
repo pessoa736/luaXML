@@ -1,8 +1,8 @@
 --[[
-    luaXML Init
+    DaviLuaXML Init
     ============
     
-    Módulo principal do luaXML. Registra um searcher customizado no Lua
+    Módulo principal do DaviLuaXML. Registra um searcher customizado no Lua
     para permitir o uso de arquivos .lx (Lua + XML) com require().
     
     FUNCIONALIDADE:
@@ -18,7 +18,7 @@
     USO:
     ----
     -- No início do programa principal:
-    require("luaXML")
+    require("DaviLuaXML")
     
     -- Agora você pode importar arquivos .lx normalmente:
     local App = require("meu_componente")  -- carrega meu_componente.lx
@@ -33,8 +33,9 @@
     return <Botao class="primary">Clique aqui</Botao>
 --]]
 
-local readFile = require("luaXML.readFile")
-local transform = require("luaXML.transform").transform
+local readFile = require("DaviLuaXML.readFile")
+local transform = require("DaviLuaXML.transform").transform
+local errors = require("DaviLuaXML.errors")
 
 --------------------------------------------------------------------------------
 -- FUNÇÕES AUXILIARES
@@ -59,7 +60,7 @@ end
 -- SEARCHER CUSTOMIZADO
 --------------------------------------------------------------------------------
 
---- Searcher para arquivos .lx (luaXML).
+--- Searcher para arquivos .lx (DaviLuaXML).
 --- Procura arquivos .lx, transforma o código XML em Lua puro e retorna o chunk.
 ---
 --- @param modname string Nome do módulo sendo carregado via require()
@@ -76,10 +77,17 @@ local function lx_searcher(modname)
 	
 	-- Ler, transformar e compilar
 	local code = readFile(filename)
-	local transformed = transform(code)
+	local transformed, transformErr = transform(code, filename)
+	
+	if transformErr then
+		error(transformErr, 0)
+	end
+	
 	local chunk, err = load(transformed, "@"..filename)
 	
-	if not chunk then return err end
+	if not chunk then 
+		error(errors.compilationError(tostring(err), filename), 0)
+	end
 	return chunk, filename
 end
 

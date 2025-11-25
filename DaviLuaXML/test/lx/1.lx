@@ -13,9 +13,9 @@ local pt = function(props, childrens) print(table.unpack(childrens)) end
 
 
 <pt>
-    <soma>
+    <soma t={0}>
         {1}{2}{3}
-    <soma/>
+    </soma>
 </pt>
 
 print("final do test")

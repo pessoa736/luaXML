@@ -1,5 +1,5 @@
 --[[
-    luaXML Props
+    DaviLuaXML Props
     =============
     
     Módulo utilitário para conversão de propriedades (props) entre formatos.
@@ -28,7 +28,7 @@
     
     USO:
     ----
-    local props = require("luaXML.props")
+    local props = require("DaviLuaXML.props")
     
     -- Tabela para string
     local str = props.tableToPropsString({ href = "link.com", target = "_blank" })

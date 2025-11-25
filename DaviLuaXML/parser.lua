@@ -1,5 +1,5 @@
 --[[
-    luaXML Parser
+    DaviLuaXML Parser
     ==============
     
     Módulo responsável por transformar código com sintaxe XML em elementos Lua.
@@ -77,7 +77,7 @@
     
     USO:
     ----
-    local parser = require("luaXML.parser")
+    local parser = require("DaviLuaXML.parser")
     local elemento, inicio, fim = parser('<tag attr="valor">conteudo</tag>')
     
     NOTA:
@@ -101,7 +101,7 @@
 
 
 
-local elements = require("luaXML.elements") -- para criar os elementos
+local elements = require("DaviLuaXML.elements") -- para criar os elementos
 local insert = table.insert
 
 --------------------------------------------------------------------------------

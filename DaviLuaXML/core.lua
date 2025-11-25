@@ -1,5 +1,5 @@
 --[[
-    luaXML Core
+    DaviLuaXML Core
     ============
     
     Função principal para carregar e executar um arquivo .lx diretamente.
@@ -13,7 +13,7 @@
     
     USO:
     ----
-    local lx = require("luaXML.core")
+    local lx = require("DaviLuaXML.core")
     
     local resultado, erro = lx("meu_arquivo.lx")
     if erro then
@@ -26,8 +26,9 @@
     - core.lua: executa diretamente um arquivo .lx pelo caminho
 --]]
 
-local readFile = require("luaXML.readFile")
-local transform = require("luaXML.transform").transform
+local readFile = require("DaviLuaXML.readFile")
+local transform = require("DaviLuaXML.transform").transform
+local errors = require("DaviLuaXML.errors")
 
 --- Carrega, transforma e executa um arquivo .lx.
 ---
@@ -35,17 +36,28 @@ local transform = require("luaXML.transform").transform
 --- @return string|nil Código transformado (se sucesso)
 --- @return string|nil Mensagem de erro (se falha)
 return function(file)
-    local code = readFile(file)
-    local transformed = transform(code)
-
-    local chunk, loadErr = load(transformed, "@"..file)
-    if not chunk then
-        return nil, "Erro ao compilar código transformado: " .. tostring(loadErr)
+    -- Tentar ler o arquivo
+    local ok, code = pcall(readFile, file)
+    if not ok then
+        return nil, errors.format("não foi possível abrir o arquivo: " .. file)
     end
     
-    local ok, runErr = pcall(chunk)
-    if not ok then
-        return nil, "Erro ao executar código transformado: " .. tostring(runErr)
+    -- Transformar código
+    local transformed, transformErr = transform(code, file)
+    if transformErr then
+        return nil, transformErr
+    end
+
+    -- Compilar
+    local chunk, loadErr = load(transformed, "@"..file)
+    if not chunk then
+        return nil, errors.compilationError(tostring(loadErr), file)
+    end
+    
+    -- Executar
+    local execOk, runErr = pcall(chunk)
+    if not execOk then
+        return nil, errors.runtimeError(tostring(runErr), file)
     end
 
     return transformed

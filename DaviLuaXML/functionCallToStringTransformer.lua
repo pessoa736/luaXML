@@ -1,5 +1,5 @@
 --[[
-    luaXML Function Call to String Transformer (fcst)
+    DaviLuaXML Function Call to String Transformer (fcst)
     ==================================================
     
     Converte um elemento parseado em uma string de chamada de função Lua.
@@ -23,9 +23,15 @@
     
     USO:
     ----
-    local fcst = require("luaXML.functionCallToStringTransformer")
+    local fcst = require("DaviLuaXML.functionCallToStringTransformer")
     local callString = fcst(elemento)
 --]]
+
+
+local fcst -- defini antes de ser chamado
+
+
+
 
 --- Serializa um filho para string.
 --- Se for um elemento (tabela com tag), converte recursivamente.
@@ -49,7 +55,7 @@ end
 ---
 --- @param element table Elemento com { tag, props, children }
 --- @return string Chamada de função como string
-local function fcst(element)
+function fcst(element)
     -- Serializar children como tabela
     local childrens = "{"
     for idx, ch in ipairs(element.children) do
@@ -58,7 +64,7 @@ local function fcst(element)
     childrens = childrens .. "}"
     
     -- Montar chamada: tag(props, children)
-    return element.tag .. "(" .. require("luaXML.tableToString")(element.props or {}, false) ..",".. childrens .. ")"
+    return element.tag .. "(" .. require("DaviLuaXML.tableToString")(element.props or {}, false) ..",".. childrens .. ")"
 end
 
 return fcst

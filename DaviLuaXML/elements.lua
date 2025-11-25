@@ -1,5 +1,5 @@
 --[[
-    luaXML Elements
+    DaviLuaXML Elements
     ================
 
     Pequeno utilitário que provê uma factory para criar "elementos" usados
@@ -14,7 +14,7 @@
     (para pretty-print) e `__concat` (para concatenar via tostring).
 
     Exemplo de uso:
-      local elements = require("luaXML.elements")
+      local elements = require("DaviLuaXML.elements")
       local el = elements("div", {class="x"}, {"conteudo"})
 
     Nota: `createElement` no campo da tabela é uma função simples que delega
@@ -36,8 +36,8 @@ local elements = setmetatable({
                     children = args[3],
                 },
                 {
-                    -- Representação string legível via luaXML.tableToString
-                    __tostring = require("luaXML.tableToString"),
+                    -- Representação string legível via DaviLuaXML.tableToString
+                    __tostring = require("DaviLuaXML.tableToString"),
                     -- Suporte a concatenação ('element' .. 'x') via tostring
                     __concat = function (a, b)
                         return tostring(a) .. tostring(b)

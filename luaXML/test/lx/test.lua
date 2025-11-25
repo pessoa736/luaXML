@@ -1,1 +1,0 @@
-require("luaXML.core")("./luaXML/test/lx/1.lx")
