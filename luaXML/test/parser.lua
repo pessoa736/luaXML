@@ -5,6 +5,9 @@ local test = [[
     <test/>
     <test/>
     <html.a href="linkMuitoLegal.com" />
+    {1}
+    {"test"}
+    test
   </test>
 ]]
 

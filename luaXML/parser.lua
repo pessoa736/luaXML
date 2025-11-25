@@ -1,274 +1,460 @@
-local elements = require("luaXML.elements")
+--[[
+    luaXML Parser
+    ==============
+    
+    Módulo responsável por transformar código com sintaxe XML em elementos Lua.
+    
+    FUNCIONALIDADE:
+    ---------------
+    Converte tags XML em tabelas Lua com a seguinte estrutura:
+    {
+        tag = "nome_da_tag",
+        props = { atributo1 = valor1, ... },
+        children = { filho1, filho2, ... }
+    }
+    
+    EXEMPLOS DE CONVERSÃO:
+    ----------------------
+    
+    1. Tag simples com atributo e texto:
+       <h1 class="titulo"> test </h1>
+       
+       Resultado:
+       {
+           tag = "h1",
+           props = { class = "titulo" },
+           children = { "test" }
+       }
+    
+    2. Tag com expressões Lua em chaves:
+       <h1> {1} {2} </h1>
+       
+       Resultado:
+       {
+           tag = "h1",
+           props = nil,
+           children = { 1, 2 }
+       }
+    
+    3. Tags aninhadas:
+       <a href="link"> <h1> alt </h1> </a>
+       
+       Resultado:
+       {
+           tag = "a",
+           props = { href = "link" },
+           children = {
+               {
+                   tag = "h1",
+                   props = nil,
+                   children = { "alt" }
+               }
+           }
+       }
+    
+    4. Tag self-closing:
+       <img src="foto.png" />
+       
+       Resultado:
+       {
+           tag = "img",
+           props = { src = "foto.png" },
+           children = {}
+       }
+    
+    TIPOS DE FILHOS SUPORTADOS:
+    ---------------------------
+    - Tags aninhadas (incluindo nomes com ponto, ex: <html.div />)
+    - Expressões Lua entre chaves: {1 + 2}, {"texto"}, {variavel}
+    - Texto puro
+    
+    TIPOS DE ATRIBUTOS SUPORTADOS:
+    ------------------------------
+    - String com aspas: attr="valor" ou attr='valor'
+    - Expressão Lua: attr={expressao}
+    - Valor sem aspas: attr=valor
+    - Booleano implícito: attr (equivale a attr=true)
+    
+    USO:
+    ----
+    local parser = require("luaXML.parser")
+    local elemento, inicio, fim = parser('<tag attr="valor">conteudo</tag>')
+    
+    NOTA:
+    -----
+    As tags não são tags HTML reais - elas chamam funções Lua definidas no código.
+    Exemplo:
+        function soma(props, children) return props.a + props.b end
+        print(<soma a={2} b={3}/>)  -- imprime 5
+    
+    Tags reservadas do Lua (<const>, <close>) são ignoradas.
+    
+    RETORNO:
+    --------
+    - elemento: tabela com { tag, props, children }
+    - inicio: posição inicial da tag no código original
+    - fim: posição final da tag no código original
+]]--
+
+
+
+
+
+
+local elements = require("luaXML.elements") -- para criar os elementos
 local insert = table.insert
 
+--------------------------------------------------------------------------------
+-- FUNÇÕES AUXILIARES
+--------------------------------------------------------------------------------
+
+--- Remove espaços em branco do início e fim de uma string.
+--- @param str string String a ser processada
+--- @return string String sem espaços nas extremidades
 local function trim(str)
-return (str:match("^%s*(.-)%s*$") or "")
+    return (str:match("^%s*(.-)%s*$") or "")
 end
 
+--- Conta quantos espaços em branco existem no início de uma string.
+--- @param str string String a ser analisada
+--- @return number Quantidade de espaços no início
 local function leading_spaces(str)
-local prefix = str:match("^(%s*)")
-return prefix and #prefix or 0
+    local prefix = str:match("^(%s*)")
+    return prefix and #prefix or 0
 end
 
+--------------------------------------------------------------------------------
+-- PARSER DE ATRIBUTOS
+--------------------------------------------------------------------------------
+
+--- Faz o parse de uma string de atributos XML.
+--- Suporta:
+---   - Strings com aspas duplas ou simples: attr="valor" ou attr='valor'
+---   - Expressões Lua em chaves: attr={1 + 2}
+---   - Valores sem aspas: attr=valor
+---   - Atributos booleanos: attr (equivale a attr=true)
+---
+--- @param attrString string String contendo os atributos
+--- @return table|nil Tabela de atributos ou nil se vazia
 local function parseAttributes(attrString)
-attrString = attrString and trim(attrString) or ""
-if attrString == "" then
-return nil
+    attrString = attrString and trim(attrString) or ""
+    if attrString == "" then
+    return nil
 end
 
-local attrs = {}  
-local i, len = 1, #attrString  
+local attrs = {}
+local i, len = 1, #attrString
 
-local function skipWhitespace()  
-    while i <= len and attrString:sub(i, i):match("%s") do  
-        i = i + 1  
-    end  
-end  
+--- Avança o índice pulando espaços em branco
+local function skipWhitespace()
+    while i <= len and attrString:sub(i, i):match("%s") do
+        i = i + 1
+    end
+end
 
-local function readName()  
-    local start = i  
-    while i <= len and attrString:sub(i, i):match("[-%w_:.]") do  
-        i = i + 1  
-    end  
-    if start == i then  
-        return nil  
-    end  
-    return attrString:sub(start, i - 1)  
-end  
+--- Lê o nome de um atributo (aceita letras, números, hífen, underscore, dois-pontos e ponto)
+--- @return string|nil Nome do atributo ou nil se não encontrado
+local function readName()
+    local start = i
+    while i <= len and attrString:sub(i, i):match("[-%w_:.]") do
+        i = i + 1
+    end
+    if start == i then
+        return nil
+    end
+    return attrString:sub(start, i - 1)
+end
 
-local function readValue()  
-    if i > len then  
-        return true  
-    end  
+--- Lê o valor de um atributo.
+--- Suporta strings com aspas, expressões em chaves e valores simples.
+--- @return any Valor do atributo (string, number, boolean, ou resultado de expressão Lua)
+local function readValue()
+    if i > len then
+        return true
+    end
 
-    local ch = attrString:sub(i, i)  
+    local ch = attrString:sub(i, i)
 
-    if ch == '"' or ch == "'" then  
-        local quote = ch  
-        i = i + 1  
-        local start = i  
-        while i <= len and attrString:sub(i, i) ~= quote do  
-            i = i + 1  
-        end  
-        local value = attrString:sub(start, i - 1)  
-        if attrString:sub(i, i) == quote then  
-            i = i + 1  
-        end  
-        return value  
-    elseif ch == '{' then  
-        i = i + 1  
-        local start = i  
-        local depth = 1  
-        while i <= len do  
-            local current = attrString:sub(i, i)  
-            if current == '{' then  
-                depth = depth + 1  
-            elseif current == '}' then  
-                depth = depth - 1  
-                if depth == 0 then  
-                    local value = attrString:sub(start, i - 1)  
-                    i = i + 1  
-                    value = trim(value)  
-                    -- tentar avaliar expressão dentro das chaves com segurança  
-                    local env = { math = math, tonumber = tonumber }  
-                    local fn, loadErr = load("return " .. value, "attr", "t", env)  
-                    if fn then  
-                        local ok, result = pcall(fn)  
-                        if ok then  
-                            return result  
-                        end  
-                    end  
-                    return value  
-                end  
-            end  
-            i = i + 1  
-        end  
-        local value = trim(attrString:sub(start))  
-        local env = { math = math, tonumber = tonumber }  
-        local fn, loadErr = load("return " .. value, "attr", "t", env)  
-        if fn then  
-            local ok, result = pcall(fn)  
-            if ok then  
-                return result  
-            end  
-        end  
-        return value  
-    else  
-        local start = i  
-        while i <= len and not attrString:sub(i, i):match("%s") do  
-            i = i + 1  
-        end  
-        return attrString:sub(start, i - 1)  
-    end  
-end  
+    -- Valor entre aspas (duplas ou simples)
+    if ch == '"' or ch == "'" then
+        local quote = ch
+        i = i + 1
+        local start = i
+        while i <= len and attrString:sub(i, i) ~= quote do
+            i = i + 1
+        end
+        local value = attrString:sub(start, i - 1)
+        if attrString:sub(i, i) == quote then
+            i = i + 1
+        end
+        return value
 
-while i <= len do  
-    skipWhitespace()  
-    if i > len then  
-        break  
-    end  
+    -- Expressão Lua entre chaves
+    elseif ch == '{' then
+        i = i + 1
+        local start = i
+        local depth = 1
+        while i <= len do
+            local current = attrString:sub(i, i)
+            if current == '{' then
+                depth = depth + 1
+            elseif current == '}' then
+                depth = depth - 1
+                if depth == 0 then
+                    local value = attrString:sub(start, i - 1)
+                    i = i + 1
+                    value = trim(value)
+                    -- Avaliar expressão Lua em ambiente seguro
+                    local env = { math = math, tonumber = tonumber }
+                    local fn, _ = load("return " .. value, "attr", "t", env)
+                    if fn then
+                        local ok, result = pcall(fn)
+                        if ok then
+                            return result
+                        end
+                    end
+                    return value
+                end
+            end
+            i = i + 1
+        end
+        -- Chave não fechada - retorna o que tiver
+        local value = trim(attrString:sub(start))
+        local env = { math = math, tonumber = tonumber }
+        local fn, _ = load("return " .. value, "attr", "t", env)
+        if fn then
+            local ok, result = pcall(fn)
+            if ok then
+                return result
+            end
+        end
+        return value
 
-    local name = readName()  
-    if not name then  
-        break  
-    end  
+    -- Valor simples sem aspas (até próximo espaço)
+    else
+        local start = i
+        while i <= len and not attrString:sub(i, i):match("%s") do
+            i = i + 1
+        end
+        return attrString:sub(start, i - 1)
+    end
+end
 
-    skipWhitespace()  
-    local value  
-    if attrString:sub(i, i) == '=' then  
-        i = i + 1  
-        skipWhitespace()  
-        value = readValue()  
-    else  
-        value = true  
-    end  
+-- Loop principal: lê pares nome=valor
+while i <= len do
+    skipWhitespace()
+    if i > len then
+        break
+    end
 
-    attrs[name] = value  
-end  
+    local name = readName()
+    if not name then
+        break
+    end
 
-if next(attrs) == nil then  
-    return nil  
-end  
+    skipWhitespace()
+    local value
+    if attrString:sub(i, i) == '=' then
+        i = i + 1
+        skipWhitespace()
+        value = readValue()
+    else
+        -- Atributo booleano (sem valor = true)
+        value = true
+    end
+
+    attrs[name] = value
+end
+
+if next(attrs) == nil then
+    return nil
+end
 
 return attrs
 
 end
 
+--------------------------------------------------------------------------------
+-- PARSER DE ELEMENTOS
+--------------------------------------------------------------------------------
+
+--- Escapa caracteres especiais de pattern Lua em uma string.
+--- @param s string String a ser escapada
+--- @return string String com caracteres especiais escapados
+local function escapePattern(s)
+    return (s:gsub("(%W)", "%%%1"))
+end
+
+--- Faz o parse de um elemento XML completo.
+--- Processa a tag de abertura, atributos, conteúdo interno (filhos) e tag de fechamento.
+---
+--- @param code string Código fonte contendo o elemento
+--- @param globalStart number|nil Posição inicial no código original (padrão: 1)
+--- @return table|nil Elemento parseado com { tag, props, children }
+--- @return number|string Posição inicial absoluta ou mensagem de erro
+--- @return number|nil Posição final absoluta
 local function parseElement(code, globalStart)
-globalStart = globalStart or 1
+    globalStart = globalStart or 1
 
-local leading = leading_spaces(code)  
-code = trim(code)  
-globalStart = globalStart + leading  
+    -- Ajustar para espaços iniciais
+    local leading = leading_spaces(code)
+    code = trim(code)
+    globalStart = globalStart + leading
 
--- captura tag de abertura  
-local startTagInit, startTagEnd, name, attrs, selfClosed = code:find("^<([%w_]+)%s*(.-)(/?)>")  
+    -- Captura tag de abertura: <nome atributos /?>
+    -- Suporta nomes com ponto (ex: html.div, React.Fragment)
+    local startTagInit, startTagEnd, name, attrs, selfClosed = code:find("^<([%w_.]+)%s*(.-)(/?)>")
 
-if not name then  
-    return nil, "Tag de abertura inválida"  
-end  
+    if not name then
+        return nil, "Tag de abertura inválida"
+    end
 
--- ignorar tags reservadas do Lua (<const>, <close>) usadas em atributos / sintaxe  
-if name == "const" or name == "close" then  
-    return nil, "Tag reservada Lua ignorada"  
-end  
+    -- Ignorar tags reservadas do Lua usadas em sintaxe de variáveis
+    if name == "const" or name == "close" then
+        return nil, "Tag reservada Lua ignorada"
+    end
 
+    -- Criar nó base do elemento
+    local node = {
+        name = name,
+        attrs = parseAttributes(attrs),
+        children = {}
+    }
 
--- nó base  
-local node = {  
-    name = name,  
-    attrs = parseAttributes(attrs),  
-    children = {}  
-}  
+    local absoluteStart = globalStart + startTagInit - 1
+    local absoluteEnd = nil -- será determinado após encontrar fechamento
 
-local absoluteStart = globalStart + startTagInit - 1  
-local absoluteEnd = nil -- será determinado após encontrar fechamento  
+    -- Tag self-closing: <tag ... />
+    if selfClosed == "/" then
+        absoluteEnd = globalStart + startTagEnd - 1
+        return elements:createElement(node.name, node.attrs, {}), absoluteStart, absoluteEnd
+    end
 
--- se for <test .../>  
-if selfClosed == "/" then  
-    return elements:createElement(node.name, node.attrs, {}), absoluteStart, absoluteEnd  
-end  
+    -- Buscar tag de fechamento correspondente
+    local i = startTagEnd + 1
+    local escapedName = escapePattern(name)
+    local searchPos = i
+    local contentStart = i
+    local depth = 0 -- controle de profundidade para tags aninhadas de mesmo nome
 
--- agora precisamos achar o fechamento correspondente  
-local i = startTagEnd + 1  
-local depth = 0  
-local contentStart = i  
+    while true do
+        -- Buscar próxima tag com mesmo nome (abertura ou fechamento)
+        local s, e, slash, rest = code:find("<(/?)" .. escapedName .. "([^>]*)>", searchPos)
+        if not s then
+            return nil, "Tag de fechamento não encontrada para: " .. name
+        end
 
-while true do  
-    -- acha próxima abertura ou fechamento (suporta fechamento alternativo <name/>)  
-    local nextOpen = code:find("<"..name.."%f[^%w_][^/]", i)  
-    local nextCloseStd = code:find("</"..name.."%s*>", i)  
-    local nextCloseAlt = code:find("<"..name.."%s*/>", i)  
-    local nextClose  
-    if nextCloseStd and nextCloseAlt then  
-        nextClose = math.min(nextCloseStd, nextCloseAlt)  
-    else  
-        nextClose = nextCloseStd or nextCloseAlt  
-    end  
+        if slash == "/" then
+            -- Tag de fechamento encontrada
+            if depth == 0 then
+                -- Fechamento correspondente ao elemento atual
+                local rawContent = code:sub(contentStart, s - 1)
+                absoluteEnd = globalStart + e - 1
 
-    if not nextClose then  
-        return nil, "Tag de fechamento não encontrada para: " .. name  
-    end  
+                -- Processar conteúdo interno (filhos)
+                if trim(rawContent) ~= "" then
+                    local pos = 1
+                    local len = #rawContent
 
-    if nextOpen and nextOpen < nextClose then  
-        depth = depth + 1  
-        i = nextOpen + 1  
-    else  
-        if depth > 0 then  
-            depth = depth - 1  
-            i = nextClose + 1  
-        else  
-            -- achamos o fechamento correspondente  
-            local rawContent = code:sub(contentStart, nextClose - 1)  
-            -- determinar fechamento real para posição final  
-            local closingPatternStd = "</"..name.."%s*>"  
-            local closingPatternAlt = "<"..name.."%s*/>"  
-            local _, stdEnd = code:find(closingPatternStd, nextClose)  
-            local _, altEnd = code:find(closingPatternAlt, nextClose)  
-            local closingEnd = stdEnd or altEnd or (nextClose + #name + 2) -- fallback aproximado  
-            absoluteEnd = globalStart + closingEnd - 1  
-        if trim(rawContent) ~= "" then  
-            local pos = 1  
-            local len = #rawContent  
-              
-            while pos <= len do  
-                local openStart = rawContent:find("<([%w_]+)", pos)  
-                if not openStart then break end  
-          
-                -- achar fechamento da tag encontrada  
-                local segment = rawContent:sub(openStart)  
-                local childOffset = globalStart + contentStart + openStart - 2  
-                local child = select(1, parseElement(segment, childOffset))  
-              
-                if not child then  
-                    -- caso seja texto puro  
-                    break  
-                end  
-                  
-                insert(node.children, child)  
-          
-                -- avançar posição até depois da tag parseada  
-                local _, endTagEnd = segment:find("</"..child.tag.."%s*>")  
-                if not endTagEnd then  
-                    -- autocontenida tipo <test/>  
-                    local selfClose = segment:find("/>")  
-                    if not selfClose then break end  
-                        pos = openStart + selfClose  
-                    else  
-                        pos = openStart + endTagEnd  
-                    end  
-                end  
-            end  
+                    while pos <= len do
+                        -- Pular espaços em branco
+                        local wsStart, wsEnd = rawContent:find("^%s+", pos)
+                        if wsStart then
+                            pos = wsEnd + 1
+                            if pos > len then break end
+                        end
 
-            -- Se não achou filhos por tags, tentar capturar filhos por expressões em chaves  
-            if #node.children == 0 then  
-                for braceContent in rawContent:gmatch("%b{}") do  
-                    local inner = braceContent:sub(2, -2)  
-                    inner = trim(inner)  
-                    if inner ~= "" then  
-                        local env = { math = math, tonumber = tonumber, ipairs = ipairs }  
-                        local fn = load("return " .. inner, "child", "t", env)  
-                        if fn then  
-                            local ok, value = pcall(fn)  
-                            if ok then  
-                                insert(node.children, value)  
-                            end  
-                        end  
-                    end  
-                end  
-            end  
+                        -- CASO 1: Tag filha
+                        if rawContent:sub(pos, pos) == "<" then
+                            local segment = rawContent:sub(pos)
+                            local childOffset = globalStart + contentStart + pos - 2
+                            local child, childAbsStart, childAbsEnd = parseElement(segment, childOffset)
 
-            return elements:createElement(node.name, node.attrs, node.children), absoluteStart, absoluteEnd or (globalStart + startTagEnd - 1)  
-        end  
-    end  
+                            if child then
+                                insert(node.children, child)
+
+                                -- Calcular quantos caracteres consumir
+                                local consumed = 0
+                                if childAbsStart and childAbsEnd then
+                                    consumed = childAbsEnd - childAbsStart + 1
+                                else
+                                    local sc = segment:find("/>")
+                                    if sc then consumed = sc + 1 else break end
+                                end
+
+                                pos = pos + consumed
+                            else
+                                pos = pos + 1
+                            end
+
+                        -- CASO 2: Expressão Lua entre chaves {expr}
+                        elseif rawContent:sub(pos, pos) == "{" then
+                            local braceStart, braceEnd = rawContent:find("%b{}", pos)
+                            if braceStart == pos and braceEnd then
+                                local inner = rawContent:sub(braceStart + 1, braceEnd - 1)
+                                inner = trim(inner)
+                                if inner ~= "" then
+                                    -- Avaliar expressão em ambiente seguro
+                                    local env = { math = math, tonumber = tonumber, ipairs = ipairs, string = string }
+                                    local fn = load("return " .. inner, "child", "t", env)
+                                    if fn then
+                                        local ok, value = pcall(fn)
+                                        if ok then
+                                            insert(node.children, value)
+                                        else
+                                            -- Erro na execução: inserir como string
+                                            insert(node.children, inner)
+                                        end
+                                    else
+                                        -- Erro no parse: inserir como string
+                                        insert(node.children, inner)
+                                    end
+                                end
+                                pos = braceEnd + 1
+                            else
+                                pos = pos + 1
+                            end
+
+                        -- CASO 3: Texto puro
+                        else
+                            local nextSpecial = rawContent:find("[<{]", pos)
+                            local textEnd = nextSpecial and (nextSpecial - 1) or len
+                            local textContent = trim(rawContent:sub(pos, textEnd))
+                            if textContent ~= "" then
+                                insert(node.children, textContent)
+                            end
+                            pos = nextSpecial or (len + 1)
+                        end
+                    end
+                end
+
+                return elements:createElement(node.name, node.attrs, node.children), absoluteStart, absoluteEnd or (globalStart + startTagEnd - 1)
+            else
+                -- Fechamento de tag aninhada de mesmo nome
+                depth = depth - 1
+                searchPos = e + 1
+            end
+        else
+            -- Tag de abertura encontrada (mesmo nome)
+            -- Verificar se é self-closing
+            if not rest:match("/%s*$") then
+                depth = depth + 1
+            end
+            searchPos = e + 1
+        end
+    end
 end
 
-end
+--------------------------------------------------------------------------------
+-- EXPORTAÇÃO DO MÓDULO
+--------------------------------------------------------------------------------
 
+--- Parser principal.
+--- Uso: parser(codigo) retorna elemento, posicao_inicio, posicao_fim
 local parser = setmetatable({}, {
-__call = function(_, code)
-return parseElement(code, 1)
-end
+    __call = function(_, code)
+        return parseElement(code, 1)
+    end
 })
 
 return parser
