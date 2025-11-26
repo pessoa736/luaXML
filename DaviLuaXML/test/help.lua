@@ -4,7 +4,11 @@
     O módulo help fornece documentação sobre o uso do DaviLuaXML.
 ]]
 
-print("=== TESTE: help.lua ===\n")
+
+_G.log = _G.log or require("loglua")
+local logTest = log.inSection("tests")
+
+logTest("=== TESTE: help.lua ===\n")
 
 local help = require("DaviLuaXML.help")
 
@@ -12,14 +16,14 @@ local passed = 0
 local failed = 0
 
 local function test(name, fn)
-    io.write(string.format("%d. %s:\n", passed + failed + 1, name))
+    logTest(string.format("%d. %s:", passed + failed + 1, name))
     local ok, err = pcall(fn)
     if ok then
         passed = passed + 1
-        print("   ✓ OK\n")
+        logTest("   ✓ OK\n")
     else
         failed = failed + 1
-        print("   ✗ FALHOU: " .. tostring(err) .. "\n")
+        logTest("   ✗ FALHOU: " .. tostring(err) .. "\n")
     end
 end
 
@@ -117,13 +121,15 @@ test("Tópicos contêm conteúdo", function()
     end
 end)
 
-print(string.rep("=", 50))
-print(string.format("Resultado: %d passaram, %d falharam", passed, failed))
-print(string.rep("=", 50))
+logTest(string.rep("=", 50))
+logTest(string.format("Resultado: %d passaram, %d falharam", passed, failed))
+logTest(string.rep("=", 50))
 
 if failed > 0 then
-    print("\n=== ALGUNS TESTES FALHARAM ===")
+    logTest("\n=== ALGUNS TESTES FALHARAM ===")
+    log.show("tests")
     os.exit(1)
 else
-    print("\n=== TODOS OS TESTES PASSARAM ===")
+    logTest("\n=== TODOS OS TESTES PASSARAM ===")
+    log.show("tests")
 end

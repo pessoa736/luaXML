@@ -4,7 +4,11 @@
     O módulo props converte entre tabelas Lua e strings de atributos XML.
 ]]
 
-print("=== TESTE: props.lua ===\n")
+
+_G.log = _G.log or require("loglua")
+local logTest = log.inSection("props")
+
+logTest("=== TESTE: props.lua ===")
 
 local props = require("DaviLuaXML.props")
 
@@ -12,14 +16,14 @@ local passed = 0
 local failed = 0
 
 local function test(name, fn)
-    io.write(string.format("%d. %s:\n", passed + failed + 1, name))
+    logTest(string.format("%d. %s:", passed + failed + 1, name))
     local ok, err = pcall(fn)
     if ok then
         passed = passed + 1
-        print("   ✓ OK\n")
+        logTest("   ✓ OK")
     else
         failed = failed + 1
-        print("   ✗ FALHOU: " .. tostring(err) .. "\n")
+        log.error("   ✗ FALHOU: " .. tostring(err))
     end
 end
 
@@ -98,13 +102,15 @@ test("stringToPropsTable - string vazia", function()
     assert(next(t) == nil, "tabela deveria estar vazia")
 end)
 
-print(string.rep("=", 50))
-print(string.format("Resultado: %d passaram, %d falharam", passed, failed))
-print(string.rep("=", 50))
+logTest(string.rep("=", 50))
+logTest(string.format("Resultado: %d passaram, %d falharam", passed, failed))
+logTest(string.rep("=", 50))
 
 if failed > 0 then
-    print("\n=== ALGUNS TESTES FALHARAM ===")
+    log.error("=== ALGUNS TESTES FALHARAM ===")
+    log.show()
     os.exit(1)
 else
-    print("\n=== TODOS OS TESTES PASSARAM ===")
+    logTest("=== TODOS OS TESTES PASSARAM ===")
+    log.show()
 end

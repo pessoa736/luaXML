@@ -4,20 +4,24 @@
     Testa a integração completa do loader DaviLuaXML com o sistema require do Lua.
 ]]
 
-print("=== TESTE: import_lx.lua ===\n")
+
+_G.log = _G.log or require("loglua")
+local logTest = log.inSection("tests")
+
+logTest("=== TESTE: import_lx.lua ===\n")
 
 local passed = 0
 local failed = 0
 
 local function test(name, fn)
-    io.write(string.format("%d. %s:\n", passed + failed + 1, name))
+    logTest(string.format("%d. %s:", passed + failed + 1, name))
     local ok, err = pcall(fn)
     if ok then
         passed = passed + 1
-        print("   ✓ OK\n")
+        logTest("   ✓ OK\n")
     else
         failed = failed + 1
-        print("   ✗ FALHOU: " .. tostring(err) .. "\n")
+        logTest("   ✗ FALHOU: " .. tostring(err) .. "\n")
     end
 end
 
@@ -25,7 +29,7 @@ end
 test("Registrar loader DaviLuaXML", function()
     require("DaviLuaXML")
     -- Se não der erro, passou
-    print("   loader registrado com sucesso")
+    logTest("   loader registrado com sucesso")
 end)
 
 -- Teste: Carregar arquivo .lx via require
@@ -64,13 +68,15 @@ test("Recarregar arquivo .lx", function()
     assert(ok2, "segunda carga deveria funcionar (do cache)")
 end)
 
-print(string.rep("=", 50))
-print(string.format("Resultado: %d passaram, %d falharam", passed, failed))
-print(string.rep("=", 50))
+logTest(string.rep("=", 50))
+logTest(string.format("Resultado: %d passaram, %d falharam", passed, failed))
+logTest(string.rep("=", 50))
 
 if failed > 0 then
-    print("\n=== ALGUNS TESTES FALHARAM ===")
+    logTest("\n=== ALGUNS TESTES FALHARAM ===")
+    log.show("tests")
     os.exit(1)
 else
-    print("\n=== TODOS OS TESTES PASSARAM ===")
+    logTest("\n=== TODOS OS TESTES PASSARAM ===")
+    log.show("tests")
 end

@@ -5,20 +5,24 @@
     usar require() para carregar arquivos .lx
 ]]
 
-print("=== TESTE: init.lua ===\n")
+
+_G.log = _G.log or require("loglua")
+local logTest = log.inSection("tests")
+
+logTest("=== TESTE: init.lua ===\n")
 
 local passed = 0
 local failed = 0
 
 local function test(name, fn)
-    io.write(string.format("%d. %s:\n", passed + failed + 1, name))
+    logTest(string.format("%d. %s:", passed + failed + 1, name))
     local ok, err = pcall(fn)
     if ok then
         passed = passed + 1
-        print("   ✓ OK\n")
+        logTest("   ✓ OK\n")
     else
         failed = failed + 1
-        print("   ✗ FALHOU: " .. tostring(err) .. "\n")
+        logTest("   ✗ FALHOU: " .. tostring(err) .. "\n")
     end
 end
 
@@ -34,8 +38,8 @@ end)
 -- Teste 2: Adiciona searcher ao package.searchers
 test("Adiciona searcher ao package.searchers", function()
     local newSearchersCount = #package.searchers
-    print("   searchers antes:", originalSearchersCount)
-    print("   searchers depois:", newSearchersCount)
+    logTest("   searchers antes:", originalSearchersCount)
+    logTest("   searchers depois:", newSearchersCount)
     -- Nota: pode já ter sido carregado antes nesta sessão
     assert(newSearchersCount >= originalSearchersCount, "não deveria remover searchers")
 end)
@@ -49,7 +53,7 @@ test("Searcher customizado para .lx", function()
             local result = searcher("__modulo_inexistente_xyz__")
             if type(result) == "string" and result:find("%.lx") then
                 foundLxSearcher = true
-                print("   searcher .lx encontrado na posição:", i)
+                logTest("   searcher .lx encontrado na posição:", i)
                 break
             end
         end
@@ -93,14 +97,14 @@ return M
         
         if ok and mod and mod.hello then
             local result = mod.hello()
-            print("   resultado:", result)
+            logTest("   resultado:", result)
             assert(result == "hello from .lx", "deveria retornar mensagem correta")
         else
-            print("   (módulo carregado mas sem função hello)")
+            logTest("   (módulo carregado mas sem função hello)")
         end
     else
         package.path = originalPath
-        print("   (não conseguiu criar arquivo de teste)")
+        logTest("   (não conseguiu criar arquivo de teste)")
     end
 end)
 
@@ -135,26 +139,28 @@ return M
         os.execute("rmdir " .. tempPath .. " 2>/dev/null")
         
         if ok and mod and mod.result then
-            print("   resultado:", mod.result)
+            logTest("   resultado:", mod.result)
             assert(mod.result == 42, "deveria calcular 42")
         else
-            print("   erro:", mod)
+            logTest("   erro:", mod)
             -- Não falhar, pois pode depender de detalhes de implementação
-            print("   (comportamento aceitável)")
+            logTest("   (comportamento aceitável)")
         end
     else
         package.path = originalPath
-        print("   (não conseguiu criar arquivo de teste)")
+        logTest("   (não conseguiu criar arquivo de teste)")
     end
 end)
 
-print(string.rep("=", 50))
-print(string.format("Resultado: %d passaram, %d falharam", passed, failed))
-print(string.rep("=", 50))
+logTest(string.rep("=", 50))
+logTest(string.format("Resultado: %d passaram, %d falharam", passed, failed))
+logTest(string.rep("=", 50))
 
 if failed > 0 then
-    print("\n=== ALGUNS TESTES FALHARAM ===")
+    logTest("\n=== ALGUNS TESTES FALHARAM ===")
+    log.show("tests")
     os.exit(1)
 else
-    print("\n=== TODOS OS TESTES PASSARAM ===")
+    logTest("\n=== TODOS OS TESTES PASSARAM ===")
+    log.show("tests")
 end

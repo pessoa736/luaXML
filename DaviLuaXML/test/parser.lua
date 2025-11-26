@@ -5,7 +5,11 @@
     { tag = string, props = table, children = array }
 ]]
 
-print("=== TESTE: parser.lua ===\n")
+
+_G.log = _G.log or require("loglua")
+local logTest = log.inSection("parser")
+
+logTest("=== TESTE: parser.lua ===")
 
 local parser = require("DaviLuaXML.parser")
 
@@ -13,14 +17,14 @@ local passed = 0
 local failed = 0
 
 local function test(name, fn)
-    io.write(string.format("%d. %s:\n", passed + failed + 1, name))
+    logTest(string.format("%d. %s:", passed + failed + 1, name))
     local ok, err = pcall(fn)
     if ok then
         passed = passed + 1
-        print("   ✓ OK\n")
+        logTest("   ✓ OK")
     else
         failed = failed + 1
-        print("   ✗ FALHOU: " .. tostring(err) .. "\n")
+        log.error("   ✗ FALHOU: " .. tostring(err))
     end
 end
 
@@ -149,13 +153,15 @@ test("Tag vazia com whitespace", function()
     -- Pode ter children com whitespace ou estar vazio
 end)
 
-print(string.rep("=", 50))
-print(string.format("Resultado: %d passaram, %d falharam", passed, failed))
-print(string.rep("=", 50))
+logTest(string.rep("=", 50))
+logTest(string.format("Resultado: %d passaram, %d falharam", passed, failed))
+logTest(string.rep("=", 50))
 
 if failed > 0 then
-    print("\n=== ALGUNS TESTES FALHARAM ===")
+    log.error("=== ALGUNS TESTES FALHARAM ===")
+    log.show()
     os.exit(1)
 else
-    print("\n=== TODOS OS TESTES PASSARAM ===")
+    logTest("=== TODOS OS TESTES PASSARAM ===")
+    log.show()
 end

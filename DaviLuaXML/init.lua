@@ -37,6 +37,9 @@ local readFile = require("DaviLuaXML.readFile")
 local transform = require("DaviLuaXML.transform").transform
 local errors = require("DaviLuaXML.errors")
 
+_G.log = _G.log or require("loglua")
+local logDebug = log.inSection("XMLRuntime")
+
 --------------------------------------------------------------------------------
 -- FUNÇÕES AUXILIARES
 --------------------------------------------------------------------------------
@@ -67,27 +70,38 @@ end
 --- @return function|string|nil Chunk compilado ou mensagem de erro
 --- @return string|nil Caminho do arquivo (se encontrado)
 local function lx_searcher(modname)
+	logDebug("[searcher] Procurando módulo .lx:", modname)
+	
 	-- Gerar path para .lx baseado no package.path
 	local lxpath = (package.path or ""):gsub("%.lua", ".lx")
 	local filename = findfile(modname, lxpath)
 	
 	if not filename then
+		logDebug("[searcher] Módulo .lx não encontrado:", modname)
 		return "\n\tno .lx file found for " .. modname
 	end
 	
+	logDebug("[searcher] Arquivo encontrado:", filename)
+	
 	-- Ler, transformar e compilar
 	local code = readFile(filename)
+	logDebug("[searcher] Código lido, tamanho:", #code, "bytes")
+	
 	local transformed, transformErr = transform(code, filename)
 	
-	if transformErr then
+	if transformErr or not transformed then
+		logDebug("[searcher] ERRO na transformação:", transformErr)
 		error(transformErr, 0)
 	end
 	
 	local chunk, err = load(transformed, "@"..filename)
 	
-	if not chunk then 
+	if not chunk then
+		logDebug("[searcher] ERRO na compilação:", err)
 		error(errors.compilationError(tostring(err), filename), 0)
 	end
+	
+	logDebug("[searcher] Módulo carregado com sucesso:", modname)
 	return chunk, filename
 end
 

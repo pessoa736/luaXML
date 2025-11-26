@@ -42,6 +42,9 @@ local parser = require("DaviLuaXML.parser")
 local fcst = require("DaviLuaXML.functionCallToStringTransformer")
 local errors = require("DaviLuaXML.errors")
 
+_G.log = _G.log or require("loglua")
+local logDebug = log.inSection("XMLRuntime")
+
 --------------------------------------------------------------------------------
 -- FUNÇÕES AUXILIARES
 --------------------------------------------------------------------------------
@@ -126,30 +129,38 @@ end
 ---
 --- @param code string Código fonte contendo tags XML
 --- @param filename string|nil Nome do arquivo (para mensagens de erro)
---- @return string Código Lua puro com as tags substituídas por chamadas de função
+--- @return string|nil Código Lua puro com as tags substituídas por chamadas de função
 --- @return string|nil Mensagem de erro (se houver)
 ---
 --- Exemplo:
 ---   transform_code('<btn onClick={handler}>Clique</btn>')
 ---   -- Retorna: 'btn({onClick = handler}, {"Clique"})'
 local function transform_code(code, filename)
+  logDebug("[transform] Iniciando transformação:", filename or "<string>")
   local pos = 1
   local originalCode = code
+  local tagCount = 0
   
   while true do
     -- Encontrar próximo elemento
     local openStart, tagName, element = find_next_element(code, pos)
     if not openStart or not element then break end
     
+    tagCount = tagCount + 1
+    logDebug("[transform] Tag encontrada #" .. tagCount .. ":", "<" .. tagName .. ">")
+    
     -- Localizar extensão completa da tag
     local s, tagEnd = locate_full_tag(code, openStart)
     if not s then 
+      logDebug("[transform] ERRO: tag não fechada:", tagName)
       -- Calcular posição no código original para erro
+      ---@diagnostic disable-next-line: param-type-mismatch
       return nil, errors.unclosedTag(tagName, originalCode, openStart, filename)
     end
     
     -- Converter elemento em chamada de função
     local callStr = fcst(element)
+    logDebug("[transform] Convertido para:", callStr:sub(1, 60) .. (#callStr > 60 and "..." or ""))
     
     -- Substituir tag pelo código Lua
     code = code:sub(1, s - 1) .. callStr .. code:sub(tagEnd + 1)
@@ -158,6 +169,7 @@ local function transform_code(code, filename)
     pos = s + #callStr
   end
   
+  logDebug("[transform] Transformação concluída:", tagCount, "tags processadas")
   return code, nil
 end
 

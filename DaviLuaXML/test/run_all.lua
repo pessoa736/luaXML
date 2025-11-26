@@ -12,9 +12,13 @@
         lua DaviLuaXML/test/run_all.lua
 ]]
 
-print("╔══════════════════════════════════════════════════╗")
-print("║          DaviLuaXML - Suite de Testes                ║")
-print("╚══════════════════════════════════════════════════╝\n")
+
+_G.log = _G.log or require("loglua")
+local logRunner = log.inSection("runner")
+
+logRunner("╔══════════════════════════════════════════════════╗")
+logRunner("║          DaviLuaXML - Suite de Testes            ║")
+logRunner("╚══════════════════════════════════════════════════╝\n")
 
 -- Configurar package.path para encontrar os módulos
 local scriptPath = arg[0]
@@ -46,15 +50,15 @@ local results = {
 
 -- Função para executar um teste
 local function runTest(name)
-    io.write(string.format("\n▶ Executando: %s.lua\n", name))
-    io.write(string.rep("-", 50) .. "\n")
+    logRunner(string.format("\n▶ Executando: %s.lua", name))
+    logRunner(string.rep("-", 50))
     
     local testPath = projectRoot .. "/DaviLuaXML/test/" .. name .. ".lua"
     
     -- Verificar se arquivo existe
     local f = io.open(testPath, "r")
     if not f then
-        print("   ⚠ Arquivo não encontrado: " .. testPath)
+        logRunner("   ⚠ Arquivo não encontrado: " .. testPath)
         table.insert(results.skipped, name)
         return
     end
@@ -69,7 +73,7 @@ local function runTest(name)
     
     local handle = io.popen(cmd)
     if not handle then
-        print("   ✗ Falha ao executar")
+        logRunner("   ✗ Falha ao executar")
         table.insert(results.failed, {name = name, error = "Falha ao executar comando"})
         return
     end
@@ -78,7 +82,7 @@ local function runTest(name)
     local success, exitType, exitCode = handle:close()
     
     -- Mostrar saída
-    print(output)
+    logRunner(output)
     
     -- Verificar resultado
     if success or (exitType == "exit" and exitCode == 0) then
@@ -97,34 +101,36 @@ for _, testName in ipairs(testFiles) do
 end
 
 -- Relatório final
-print("\n")
-print("╔══════════════════════════════════════════════════╗")
-print("║                   RESULTADO                      ║")
-print("╚══════════════════════════════════════════════════╝\n")
+logRunner("\n")
+logRunner("╔══════════════════════════════════════════════════╗")
+logRunner("║                   RESULTADO                      ║")
+logRunner("╚══════════════════════════════════════════════════╝\n")
 
-print(string.format("✓ Passaram:  %d testes", #results.passed))
+logRunner(string.format("✓ Passaram:  %d testes", #results.passed))
 for _, name in ipairs(results.passed) do
-    print(string.format("    • %s", name))
+    logRunner(string.format("    • %s", name))
 end
 
 if #results.skipped > 0 then
-    print(string.format("\n⚠ Pulados:   %d testes", #results.skipped))
+    logRunner(string.format("\n⚠ Pulados:   %d testes", #results.skipped))
     for _, name in ipairs(results.skipped) do
-        print(string.format("    • %s", name))
+        logRunner(string.format("    • %s", name))
     end
 end
 
 if #results.failed > 0 then
-    print(string.format("\n✗ Falharam:  %d testes", #results.failed))
+    logRunner(string.format("\n✗ Falharam:  %d testes", #results.failed))
     for _, result in ipairs(results.failed) do
-        print(string.format("    • %s: %s", result.name, result.error))
+        logRunner(string.format("    • %s: %s", result.name, result.error))
     end
 end
 
-print("\n" .. string.rep("═", 52))
-print(string.format("Total: %d passaram, %d pulados, %d falharam",
+logRunner("\n" .. string.rep("═", 52))
+logRunner(string.format("Total: %d passaram, %d pulados, %d falharam",
     #results.passed, #results.skipped, #results.failed))
-print(string.rep("═", 52))
+logRunner(string.rep("═", 52))
+
+log.show({"runner", "XMLRuntime"})
 
 -- Código de saída
 if #results.failed > 0 then
@@ -132,3 +138,5 @@ if #results.failed > 0 then
 else
     os.exit(0)
 end
+
+

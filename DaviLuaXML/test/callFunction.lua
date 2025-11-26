@@ -4,7 +4,10 @@
     Testa o fluxo completo: elements.createElement -> functionCallToStringTransformer
 ]]
 
-print("=== TESTE: callFunction.lua (integração) ===\n")
+_G.log = _G.log or require("loglua")
+local logTest = log.inSection("tests")
+
+logTest("=== TESTE: callFunction.lua (integração) ===\n")
 
 local fcst = require("DaviLuaXML.functionCallToStringTransformer")
 local elements = require("DaviLuaXML.elements")
@@ -13,14 +16,14 @@ local passed = 0
 local failed = 0
 
 local function test(name, fn)
-    io.write(string.format("%d. %s:\n", passed + failed + 1, name))
+    logTest(string.format("%d. %s:", passed + failed + 1, name))
     local ok, err = pcall(fn)
     if ok then
         passed = passed + 1
-        print("   ✓ OK\n")
+        logTest("   ✓ OK\n")
     else
         failed = failed + 1
-        print("   ✗ FALHOU: " .. tostring(err) .. "\n")
+        logTest("   ✗ FALHOU: " .. tostring(err) .. "\n")
     end
 end
 
@@ -29,7 +32,7 @@ test("Elemento simples", function()
     local el = elements:createElement("div", {}, {})
     local result = fcst(el)
     assert(result:find("div%("), "deveria conter 'div('")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
 -- Teste 2: Elemento com props
@@ -38,7 +41,7 @@ test("Elemento com props", function()
     local result = fcst(el)
     assert(result:find("button%("), "deveria conter 'button('")
     assert(result:find("id"), "deveria conter 'id'")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
 -- Teste 3: Elemento com children string
@@ -46,7 +49,7 @@ test("Elemento com children string", function()
     local el = elements:createElement("p", {}, {"texto"})
     local result = fcst(el)
     assert(result:find("'texto'"), "deveria conter 'texto'")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
 -- Teste 4: Elemento aninhado
@@ -56,7 +59,7 @@ test("Elemento aninhado", function()
     local result = fcst(outer)
     assert(result:find("div%("), "deveria conter 'div('")
     assert(result:find("span%("), "deveria conter 'span('")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
 -- Teste 5: Props complexos
@@ -68,7 +71,7 @@ test("Props complexos", function()
     local result = fcst(el)
     assert(result:find("istest"), "deveria conter 'istest'")
     assert(result:find("42") or result:find("count"), "deveria conter count ou 42")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
 -- Teste 6: Múltiplos níveis de aninhamento
@@ -80,7 +83,7 @@ test("Múltiplos níveis de aninhamento", function()
     assert(result:find("level1%("), "deveria conter 'level1('")
     assert(result:find("level2%("), "deveria conter 'level2('")
     assert(result:find("level3%("), "deveria conter 'level3('")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
 -- Teste 7: Múltiplos children
@@ -92,7 +95,7 @@ test("Múltiplos children", function()
     assert(result:find("ul%("), "deveria conter 'ul('")
     local _, count = result:gsub("li%(", "")
     assert(count == 2, "deveria ter 2 ocorrências de 'li('")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
 -- Teste 8: Props nil
@@ -100,16 +103,18 @@ test("Props nil tratado como tabela vazia", function()
     local el = elements:createElement("empty", nil, {})
     local result = fcst(el)
     assert(result:find("empty%("), "deveria conter 'empty('")
-    print("   saída:", result)
+    logTest("   saída:", result)
 end)
 
-print(string.rep("=", 50))
-print(string.format("Resultado: %d passaram, %d falharam", passed, failed))
-print(string.rep("=", 50))
+logTest(string.rep("=", 50))
+logTest(string.format("Resultado: %d passaram, %d falharam", passed, failed))
+logTest(string.rep("=", 50))
 
 if failed > 0 then
-    print("\n=== ALGUNS TESTES FALHARAM ===")
+    logTest("\n=== ALGUNS TESTES FALHARAM ===")
+    log.show("tests")
     os.exit(1)
 else
-    print("\n=== TODOS OS TESTES PASSARAM ===")
+    logTest("\n=== TODOS OS TESTES PASSARAM ===")
+    log.show("tests")
 end
