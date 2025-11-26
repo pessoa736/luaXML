@@ -1,0 +1,84 @@
+{
+  "name": "daviluaxml",
+  "displayName": "DaviLuaXML",
+  "description": "Syntax highlighting and formatting for .lx files (Lua with XML/JSX-like syntax)",
+  "version": "0.1.0",
+  "publisher": "pessoa736",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pessoa736/DaviLuaXML"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters"
+  ],
+  "keywords": [
+    "lua",
+    "xml",
+    "jsx",
+    "lx",
+    "daviluaxml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "luaxml",
+        "aliases": [
+          "LuaXML",
+          "luaxml",
+          "lx"
+        ],
+        "extensions": [
+          ".lx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "luaxml",
+        "scopeName": "source.luaxml",
+        "path": "./syntaxes/luaxml.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "daviluaxml.formatDocument",
+        "title": "Format LuaXML Document"
+      }
+    ],
+    "configuration": {
+      "title": "DaviLuaXML",
+      "properties": {
+        "daviluaxml.indentSize": {
+          "type": "number",
+          "default": 2,
+          "description": "Number of spaces for indentation"
+        },
+        "daviluaxml.useTabs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use tabs instead of spaces"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0"
+  }
+}
