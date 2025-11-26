@@ -2,6 +2,8 @@
 
 Sintaxe XML para Lua - escreva XML diretamente no seu código Lua, similar ao JSX no JavaScript.
 
+[![LuaRocks](https://img.shields.io/luarocks/v/pessoa736/daviluaxml)](https://luarocks.org/modules/pessoa736/daviluaxml)
+
 ## Instalação
 
 ```bash
@@ -39,6 +41,23 @@ end
 return App
 ```
 
+## Como Funciona
+
+O DaviLuaXML transforma tags XML em chamadas de função Lua:
+
+```lua
+-- Isso:
+local el = <div class="container">Olá</div>
+
+-- Vira isso:
+local el = div({class = "container"}, {"Olá"})
+```
+
+A função recebe dois argumentos:
+
+- `props` - tabela com os atributos
+- `children` - tabela com os filhos (texto, números ou outros elementos)
+
 ## Sintaxe XML
 
 ### Tags simples
@@ -75,6 +94,12 @@ return App
 </div>
 ```
 
+### Tags com ponto (namespaces)
+
+```lua
+<html.div class="x"/>           -- Vira: html.div({class = "x"}, {})
+```
+
 ## API
 
 ### require("DaviLuaXML")
@@ -101,13 +126,13 @@ help.list()         -- Listar tópicos
 
 ## Logging (Debug)
 
-DaviLuaXML usa [loglua](https://github.com/pessoa736/loglua) para logging. Os logs ficam na seção `XMLRuntime`:
+DaviLuaXML usa [loglua](https://github.com/pessoa736/loglua) para logging. Os logs de debug ficam na seção `XMLRuntime`:
 
 ```lua
 require("DaviLuaXML")
 require("meu_modulo")
 
--- Ver logs de debug
+-- Ver logs de debug do runtime
 log.show("XMLRuntime")
 ```
 
@@ -129,6 +154,11 @@ log.show("XMLRuntime")
 ```bash
 lua DaviLuaXML/test/run_all.lua
 ```
+
+## Dependências
+
+- Lua >= 5.4
+- [loglua](https://github.com/pessoa736/loglua)
 
 ## Licença
 
