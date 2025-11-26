@@ -1,30 +1,32 @@
 # DaviLuaXML
 
-Sintaxe XML para Lua - escreva XML diretamente no seu código Lua, similar ao JSX no JavaScript.
+XML syntax for Lua - write XML directly in your Lua code, similar to JSX in JavaScript.
 
 [![LuaRocks](https://img.shields.io/luarocks/v/pessoa736/daviluaxml)](https://luarocks.org/modules/pessoa736/daviluaxml)
 
-## Instalação
+**🌐 Language / Idioma / Idioma:** [English](README.md) | [Português](README.pt-BR.md) | [Español](README.es.md)
+
+## Installation
 
 ```bash
 luarocks install daviluaxml
 ```
 
-## Uso Básico
+## Basic Usage
 
 ```lua
--- Registrar o loader para arquivos .lx
+-- Register the loader for .lx files
 require("DaviLuaXML")
 
--- Agora você pode usar require() com arquivos .lx
-local App = require("meu_componente")
+-- Now you can use require() with .lx files
+local App = require("my_component")
 ```
 
-### Exemplo de arquivo .lx
+### Example .lx file
 
 ```lua
--- componente.lx
-local function Botao(props, children)
+-- component.lx
+local function Button(props, children)
     return string.format('<button class="%s">%s</button>', 
         props.class, 
         children[1]
@@ -33,60 +35,60 @@ end
 
 local function App()
     return <div class="container">
-        <h1>Olá Mundo!</h1>
-        <Botao class="primary">Clique aqui</Botao>
+        <h1>Hello World!</h1>
+        <Button class="primary">Click here</Button>
     </div>
 end
 
 return App
 ```
 
-## Como Funciona
+## How It Works
 
-O DaviLuaXML transforma tags XML em chamadas de função Lua:
-
-```lua
--- Isso:
-local el = <div class="container">Olá</div>
-
--- Vira isso:
-local el = div({class = "container"}, {"Olá"})
-```
-
-A função recebe dois argumentos:
-
-- `props` - tabela com os atributos
-- `children` - tabela com os filhos (texto, números ou outros elementos)
-
-## Sintaxe XML
-
-### Tags simples
+DaviLuaXML transforms XML tags into Lua function calls:
 
 ```lua
-<div/>                          -- Tag self-closing
-<p>texto</p>                    -- Tag com conteúdo
+-- This:
+local el = <div class="container">Hello</div>
+
+-- Becomes:
+local el = div({class = "container"}, {"Hello"})
 ```
 
-### Atributos
+The function receives two arguments:
+
+- `props` - table with the attributes
+- `children` - table with the children (text, numbers or other elements)
+
+## XML Syntax
+
+### Simple tags
+
+```lua
+<div/>                          -- Self-closing tag
+<p>text</p>                     -- Tag with content
+```
+
+### Attributes
 
 ```lua
 <btn class="primary"/>          -- String
-<input value={variavel}/>       -- Expressão Lua
-<comp enabled/>                 -- Booleano (true)
+<input value={variable}/>       -- Lua expression
+<comp enabled/>                 -- Boolean (true)
 ```
 
-### Expressões em chaves
+### Expressions in braces
 
 ```lua
-<soma>{1}{2}{3}</soma>          -- Múltiplos valores
-<p>{nome .. " " .. sobrenome}</p>  -- Expressões Lua
+<sum>{1}{2}{3}</sum>            -- Multiple values
+<p>{name .. " " .. surname}</p> -- Lua expressions
 ```
 
-### Tags aninhadas
+### Nested tags
 
 ```lua
 <div>
-    <span>texto</span>
+    <span>text</span>
     <ul>
         <li>item 1</li>
         <li>item 2</li>
@@ -94,72 +96,73 @@ A função recebe dois argumentos:
 </div>
 ```
 
-### Tags com ponto (namespaces)
+### Tags with dot (namespaces)
 
 ```lua
-<html.div class="x"/>           -- Vira: html.div({class = "x"}, {})
+<html.div class="x"/>           -- Becomes: html.div({class = "x"}, {})
 ```
 
 ## API
 
 ### require("DaviLuaXML")
 
-Registra o loader para arquivos `.lx`. Após isso, `require()` funciona com arquivos `.lx`.
+Registers the loader for `.lx` files. After that, `require()` works with `.lx` files.
 
 ### require("DaviLuaXML.core")
 
 ```lua
 local lx = require("DaviLuaXML.core")
-local resultado, erro = lx("arquivo.lx")
+local result, err = lx("file.lx")
 ```
 
-Executa diretamente um arquivo `.lx` pelo caminho.
+Directly executes an `.lx` file by path.
 
 ### require("DaviLuaXML.help")
 
 ```lua
 local help = require("DaviLuaXML.help")
-help()              -- Ajuda geral
-help("sintaxe")     -- Tópico específico
-help.list()         -- Listar tópicos
+help()              -- General help
+help("syntax")      -- Specific topic
+help.list()         -- List topics
+help.lang("en")     -- Set language (en, pt, es)
 ```
 
 ## Logging (Debug)
 
-DaviLuaXML usa [loglua](https://github.com/pessoa736/loglua) para logging. Os logs de debug ficam na seção `XMLRuntime`:
+DaviLuaXML uses [loglua](https://github.com/pessoa736/loglua) for logging. Debug logs are in the `XMLRuntime` section:
 
 ```lua
 require("DaviLuaXML")
-require("meu_modulo")
+require("my_module")
 
--- Ver logs de debug do runtime
+-- Show runtime debug logs
 log.show("XMLRuntime")
 ```
 
-## Módulos
+## Modules
 
-| Módulo | Descrição |
-|--------|-----------|
-| `init` | Registra o searcher para require() |
-| `core` | Executa arquivos .lx diretamente |
-| `parser` | Faz parse de tags XML |
-| `transform` | Transforma XML em Lua |
-| `elements` | Cria elementos (tabelas) |
-| `props` | Processa atributos |
-| `errors` | Formatação de erros |
-| `help` | Sistema de ajuda |
+| Module | Description |
+|--------|-------------|
+| `init` | Registers the searcher for require() |
+| `core` | Directly executes .lx files |
+| `parser` | Parses XML tags |
+| `transform` | Transforms XML to Lua |
+| `elements` | Creates elements (tables) |
+| `props` | Processes attributes |
+| `errors` | Error formatting |
+| `help` | Help system |
 
-## Testes
+## Tests
 
 ```bash
 lua DaviLuaXML/test/run_all.lua
 ```
 
-## Dependências
+## Dependencies
 
 - Lua >= 5.4
 - [loglua](https://github.com/pessoa736/loglua)
 
-## Licença
+## License
 
 MIT

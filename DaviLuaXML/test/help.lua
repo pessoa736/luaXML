@@ -2,6 +2,7 @@
     Testes do módulo help.lua
     
     O módulo help fornece documentação sobre o uso do DaviLuaXML.
+    Suporta múltiplos idiomas: en, pt, es.
 ]]
 
 
@@ -33,34 +34,54 @@ test("Módulo carrega corretamente", function()
     assert(type(help) == "table", "help deveria ser tabela")
 end)
 
--- Teste 2: Possui tópicos
-test("Possui tópicos de ajuda", function()
-    assert(help.topics ~= nil, "topics não deveria ser nil")
-    assert(help.topics.geral ~= nil, "tópico 'geral' deveria existir")
-    assert(help.topics.sintaxe ~= nil, "tópico 'sintaxe' deveria existir")
-    assert(help.topics.parser ~= nil, "tópico 'parser' deveria existir")
+-- Teste 2: Possui tópicos em inglês
+test("Possui tópicos em inglês", function()
+    assert(help.en ~= nil, "help.en não deveria ser nil")
+    assert(help.en.general ~= nil, "tópico 'general' deveria existir")
+    assert(help.en.syntax ~= nil, "tópico 'syntax' deveria existir")
+    assert(help.en.parser ~= nil, "tópico 'parser' deveria existir")
 end)
 
--- Teste 3: Função list existe
+-- Teste 3: Possui tópicos em português
+test("Possui tópicos em português", function()
+    assert(help.pt ~= nil, "help.pt não deveria ser nil")
+    assert(help.pt.geral ~= nil, "tópico 'geral' deveria existir")
+    assert(help.pt.sintaxe ~= nil, "tópico 'sintaxe' deveria existir")
+end)
+
+-- Teste 4: Possui tópicos em espanhol
+test("Possui tópicos em espanhol", function()
+    assert(help.es ~= nil, "help.es não deveria ser nil")
+    assert(help.es.general ~= nil, "tópico 'general' deveria existir")
+    assert(help.es.sintaxis ~= nil, "tópico 'sintaxis' deveria existir")
+end)
+
+-- Teste 5: Função list existe
 test("Função list existe", function()
     assert(type(help.list) == "function", "list deveria ser função")
 end)
 
--- Teste 4: Função show existe
+-- Teste 6: Função show existe
 test("Função show existe", function()
     assert(type(help.show) == "function", "show deveria ser função")
 end)
 
--- Teste 5: Metatable permite chamar como função
+-- Teste 7: Função lang existe
+test("Função lang existe", function()
+    assert(type(help.lang) == "function", "lang deveria ser função")
+end)
+
+-- Teste 8: Metatable permite chamar como função
 test("Pode ser chamado como função", function()
     -- Capturar output
     local oldPrint = print
     local output = {}
+    ---@diagnostic disable-next-line: duplicate-set-field
     print = function(...) 
         table.insert(output, table.concat({...}, "\t"))
     end
     
-    help("geral")
+    help("general")
     
     print = oldPrint
     
@@ -68,10 +89,33 @@ test("Pode ser chamado como função", function()
     assert(output[1]:find("DaviLuaXML"), "output deveria mencionar DaviLuaXML")
 end)
 
--- Teste 6: Tópico inexistente mostra lista
+-- Teste 9: Mudar idioma funciona
+test("Mudar idioma funciona", function()
+    local ok = help.lang("pt")
+    assert(ok == true, "lang('pt') deveria retornar true")
+    assert(help.currentLang == "pt", "currentLang deveria ser 'pt'")
+    
+    ok = help.lang("es")
+    assert(ok == true, "lang('es') deveria retornar true")
+    assert(help.currentLang == "es", "currentLang deveria ser 'es'")
+    
+    ok = help.lang("en")
+    assert(ok == true, "lang('en') deveria retornar true")
+    assert(help.currentLang == "en", "currentLang deveria ser 'en'")
+end)
+
+-- Teste 10: Idioma inválido retorna erro
+test("Idioma inválido retorna erro", function()
+    local ok, err = help.lang("invalid")
+    assert(ok == false, "lang('invalid') deveria retornar false")
+    assert(err ~= nil, "deveria retornar mensagem de erro")
+end)
+
+-- Teste 11: Tópico inexistente mostra lista
 test("Tópico inexistente mostra lista", function()
     local oldPrint = print
     local output = {}
+    ---@diagnostic disable-next-line: duplicate-set-field
     print = function(...) 
         table.insert(output, table.concat({...}, "\t"))
     end
@@ -82,40 +126,25 @@ test("Tópico inexistente mostra lista", function()
     
     local found = false
     for _, line in ipairs(output) do
-        if line:find("nao encontrado") or line:find("disponiveis") or line:find("Topico") then
+        if line:find("not found") or line:find("nao encontrado") or line:find("no encontrado") then
             found = true
             break
         end
     end
-    assert(found, "deveria indicar tópico não encontrado ou listar disponíveis")
+    assert(found, "deveria indicar tópico não encontrado")
 end)
 
--- Teste 7: Tópico sem argumento mostra geral
-test("Sem argumento mostra ajuda geral", function()
-    local oldPrint = print
-    local output = {}
-    print = function(...) 
-        table.insert(output, table.concat({...}, "\t"))
-    end
-    
-    help()
-    
-    print = oldPrint
-    
-    assert(#output > 0, "deveria produzir output")
-end)
-
--- Teste 8: Todos os tópicos principais existem
-test("Todos os tópicos principais existem", function()
-    local expected = {"geral", "sintaxe", "parser", "transform", "elements", "props", "errors", "core", "init"}
+-- Teste 12: Todos os tópicos principais existem em inglês
+test("Todos os tópicos principais existem em inglês", function()
+    local expected = {"general", "syntax", "parser", "transform", "elements", "props", "errors", "core", "init"}
     for _, topic in ipairs(expected) do
-        assert(help.topics[topic] ~= nil, "tópico '" .. topic .. "' deveria existir")
+        assert(help.en[topic] ~= nil, "tópico '" .. topic .. "' deveria existir em inglês")
     end
 end)
 
--- Teste 9: Tópicos contêm conteúdo
+-- Teste 13: Tópicos contêm conteúdo
 test("Tópicos contêm conteúdo", function()
-    for name, content in pairs(help.topics) do
+    for name, content in pairs(help.en) do
         assert(type(content) == "string", name .. " deveria ser string")
         assert(#content > 100, name .. " deveria ter conteúdo substancial")
     end

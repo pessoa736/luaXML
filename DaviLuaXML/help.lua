@@ -3,6 +3,7 @@
     ===========
     
     Modulo de ajuda que fornece documentacao sobre o uso do DaviLuaXML.
+    Suporta multiplos idiomas: en (English), pt (Portugues), es (Espanol).
     
     USO:
     ----
@@ -10,17 +11,451 @@
     help()           -- Exibe ajuda geral
     help("parser")   -- Exibe ajuda do modulo parser
     help.list()      -- Lista todos os topicos disponiveis
+    help.lang("pt")  -- Define o idioma (en, pt, es)
 ]]
 
 local help = {}
 
 --------------------------------------------------------------------------------
--- TEXTOS DE AJUDA
+-- CONFIGURACAO DE IDIOMA
 --------------------------------------------------------------------------------
 
-help.topics = {}
+help.currentLang = "en"
 
-help.topics.geral = [=[
+--- Define o idioma da ajuda.
+--- @param lang string Codigo do idioma: "en", "pt", "es"
+function help.lang(lang)
+    if lang == "en" or lang == "pt" or lang == "es" then
+        help.currentLang = lang
+        return true
+    end
+    return false, "Invalid language. Use: en, pt, es"
+end
+
+--------------------------------------------------------------------------------
+-- TEXTOS DE AJUDA - ENGLISH
+--------------------------------------------------------------------------------
+
+help.en = {}
+
+help.en.general = [=[
+======================================================================
+                          DaviLuaXML - Help                              
+======================================================================
+
+DaviLuaXML is a library that allows using XML syntax inside Lua code.
+XML tags are transformed into Lua function calls.
+
+QUICK START:
+------------
+    -- 1. Load DaviLuaXML at the beginning of your program
+    require("DaviLuaXML")
+    
+    -- 2. Now you can use require() with .lx files
+    local App = require("my_component")  -- loads my_component.lx
+
+BASIC EXAMPLE:
+--------------
+    -- file: app.lx
+    local function Button(props, children)
+        return string.format('<button class="%s">%s</button>', 
+            props.class or "", 
+            children[1] or "")
+    end
+    
+    local html = <Button class="primary">Click here</Button>
+    print(html)  -- <button class="primary">Click here</button>
+
+AVAILABLE TOPICS:
+-----------------
+Use help("topic") for more information:
+    - general    - This page
+    - syntax     - Supported XML syntax
+    - parser     - Parsing module
+    - transform  - Transformation module
+    - elements   - Element creation
+    - props      - Property handling
+    - errors     - Error system
+    - core       - File loading
+    - init       - Require system
+
+LANGUAGE:
+---------
+Use help.lang("code") to change language:
+    - en - English
+    - pt - Portugues
+    - es - Espanol
+
+Type: require("DaviLuaXML.help").list() to list all topics.
+]=]
+
+help.en.syntax = [=[
+======================================================================
+                       DaviLuaXML - XML Syntax                           
+======================================================================
+
+BASIC TAGS:
+-----------
+    -- Self-closing tag (no content)
+    <MyTag/>
+    
+    -- Tag with content
+    <MyTag>content here</MyTag>
+    
+    -- Nested tags
+    <Parent>
+        <Child>text</Child>
+    </Parent>
+
+ATTRIBUTES:
+-----------
+    -- Strings
+    <Tag name="value"/>
+    
+    -- Without quotes (simple values)
+    <Tag active=true count=5/>
+    
+    -- Lua expressions in braces
+    <Tag value={10 + 5} list={myTable}/>
+
+EXPRESSIONS IN CONTENT:
+-----------------------
+    -- Lua expressions inside tags
+    <Tag>{variable}</Tag>
+    <Tag>{1 + 2 + 3}</Tag>
+    <Tag>{"string"}</Tag>
+    
+    -- Multiple expressions
+    <List>{item1}{item2}{item3}</List>
+
+NAMES WITH DOT:
+---------------
+    -- Access to modules/namespaces
+    <html.div class="container"/>
+    <ui.Button onClick={handler}/>
+
+TRANSFORMATION:
+---------------
+    -- XML code is transformed into function calls:
+    <Tag prop="value">text</Tag>
+    
+    -- Becomes:
+    Tag({prop = 'value'}, {[1] = 'text'})
+    
+    -- The function receives: (props, children)
+]=]
+
+help.en.parser = [=[
+======================================================================
+                         DaviLuaXML - Parser                              
+======================================================================
+
+The parser module converts XML strings into Lua tables.
+
+USAGE:
+------
+    local parser = require("DaviLuaXML.parser")
+    local node, startPos, endPos = parser(code)
+
+PARAMETERS:
+-----------
+    code (string)    - Code containing an XML tag
+
+RETURN:
+-------
+    node (table)     - Table representing the element:
+                       { tag = string, props = table, children = array }
+    startPos (number)- Start position of the tag in the code
+    endPos (number)  - End position of the tag in the code
+
+EXAMPLE:
+--------
+    local parser = require("DaviLuaXML.parser")
+    
+    local node = parser('<div class="container"><span>text</span></div>')
+    
+    print(node.tag)              -- "div"
+    print(node.props.class)      -- "container"
+    print(node.children[1].tag)  -- "span"
+    print(node.children[1].children[1])  -- "text"
+
+NODE STRUCTURE:
+---------------
+    {
+        tag = "div",
+        props = {
+            class = "container"
+        },
+        children = {
+            [1] = {
+                tag = "span",
+                props = {},
+                children = { "text" }
+            }
+        }
+    }
+]=]
+
+help.en.transform = [==[
+======================================================================
+                        DaviLuaXML - Transform                            
+======================================================================
+
+The transform module converts Lua+XML code into pure Lua code.
+
+USAGE:
+------
+    local transform = require("DaviLuaXML.transform").transform
+    local result, err = transform(code, file)
+
+PARAMETERS:
+-----------
+    code (string)    - Lua code containing XML tags
+    file (string)    - File name (optional, for error messages)
+
+RETURN:
+-------
+    result (string)  - Transformed Lua code (or nil if error)
+    err (string)     - Error message (or nil if success)
+
+EXAMPLE:
+--------
+    local transform = require("DaviLuaXML.transform").transform
+    
+    local code = [[
+        local function Comp(props)
+            return props.x * 2
+        end
+        local result = <Comp x={21}/>
+    ]]
+    
+    local pure_lua = transform(code)
+    print(pure_lua)
+
+NOTES:
+------
+    - Lua reserved tags (const, close) are preserved
+    - Multiple tags can exist in the same code
+    - Expressions in {} are evaluated during transformation
+]==]
+
+help.en.elements = [=[
+======================================================================
+                        DaviLuaXML - Elements                             
+======================================================================
+
+The elements module provides functions to create elements programmatically.
+
+USAGE:
+------
+    local elements = require("DaviLuaXML.elements")
+    local el = elements:createElement(tag, props, children)
+
+PARAMETERS:
+-----------
+    tag (string)      - Tag name
+    props (table)     - Properties table (can be nil)
+    children (array)  - Array of children (strings, numbers or other elements)
+
+RETURN:
+-------
+    element (table)   - Element with configured metatable
+
+EXAMPLE:
+--------
+    local elements = require("DaviLuaXML.elements")
+    
+    local button = elements:createElement(
+        "button",
+        { class = "primary", disabled = false },
+        { "Click here" }
+    )
+    
+    print(button.tag)           -- "button"
+    print(button.props.class)   -- "primary"
+    print(button.children[1])   -- "Click here"
+
+METATABLE:
+----------
+    - __tostring: Converts element to string (tableToString)
+    - __concat: Allows concatenating elements with ..
+]=]
+
+help.en.props = [=[
+======================================================================
+                          DaviLuaXML - Props                              
+======================================================================
+
+The props module converts between Lua tables and XML attribute strings.
+
+FUNCTIONS:
+----------
+
+tableToPropsString(table)
+    Converts a Lua table to XML attribute string.
+    
+    local props = require("DaviLuaXML.props")
+    local s = props.tableToPropsString({ id = "btn1", count = 5 })
+    print(s)  -- 'id="btn1" count="5"'
+
+stringToPropsTable(string)
+    Converts an XML attribute string to Lua table.
+    Automatic type conversion (number, boolean).
+    
+    local props = require("DaviLuaXML.props")
+    local t = props.stringToPropsTable('count="5" active="true"')
+    print(t.count)   -- 5 (number)
+    print(t.active)  -- true (boolean)
+
+TYPE CONVERSION:
+----------------
+    String to Table:
+    - "123"   becomes 123 (number)
+    - "true"  becomes true (boolean)
+    - "false" becomes false (boolean)
+    - "text"  stays "text" (string)
+]=]
+
+help.en.errors = [=[
+======================================================================
+                         DaviLuaXML - Errors                              
+======================================================================
+
+The errors module formats error messages with context.
+
+USAGE:
+------
+    local errors = require("DaviLuaXML.errors")
+
+FUNCTIONS:
+----------
+
+errors.format(msg, file, code, position)
+    Formats a generic error message.
+    
+errors.unclosedTag(tag, file, code, position)
+    Error for unclosed tag.
+    
+errors.invalidTag(file, code, position)
+    Error for invalid/malformed tag.
+    
+errors.compilationError(file, luaError)
+    Compilation error for transformed code.
+    
+errors.runtimeError(file, luaError)
+    Runtime error for the code.
+
+errors.getLineInfo(code, position)
+    Returns line number and column for a position.
+    
+errors.getLine(code, lineNumber)
+    Returns the text of a specific line.
+
+EXAMPLE:
+--------
+    local errors = require("DaviLuaXML.errors")
+    
+    local line, column = errors.getLineInfo("abc\ndef\nghi", 6)
+    print(line, column)  -- 2, 2
+    
+    local msg = errors.unclosedTag("div", "app.lx", code, 10)
+    -- [DaviLuaXML] app.lx: line 1, column 10: tag 'div' was not closed...
+]=]
+
+help.en.core = [=[
+======================================================================
+                          DaviLuaXML - Core                               
+======================================================================
+
+The core module loads and executes .lx files directly.
+
+USAGE:
+------
+    local core = require("DaviLuaXML.core")
+    local result, err = core(path)
+
+PARAMETERS:
+-----------
+    path (string) - Path to the .lx file
+
+RETURN:
+-------
+    result (string) - Transformed code (or nil if error)
+    err (string)    - Error message (or nil if success)
+
+EXAMPLE:
+--------
+    local core = require("DaviLuaXML.core")
+    
+    -- Execute the file and return the transformed code
+    local code, err = core("my_app.lx")
+    
+    if err then
+        print("Error:", err)
+    else
+        print("Executed successfully!")
+    end
+
+PROCESS:
+--------
+    1. Read file from disk
+    2. Transform XML to Lua
+    3. Compile Lua code
+    4. Execute the code
+    5. Return transformed code or error
+]=]
+
+help.en.init = [=[
+======================================================================
+                          DaviLuaXML - Init                               
+======================================================================
+
+The init module registers a custom searcher for require().
+
+USAGE:
+------
+    require("DaviLuaXML")  -- or require("DaviLuaXML.init")
+    
+    -- Now you can load .lx files with require()
+    local App = require("my_component")
+
+HOW IT WORKS:
+-------------
+    1. Adds a searcher to package.searchers
+    2. When require() is called, searches for .lx file
+    3. If found, transforms the code and returns the chunk
+
+EXAMPLE:
+--------
+    -- main.lua
+    require("DaviLuaXML")
+    
+    local config = require("config")      -- loads config.lx
+    local App = require("components.App") -- loads components/App.lx
+
+PROJECT STRUCTURE:
+------------------
+    project/
+        main.lua          -- require("DaviLuaXML") here
+        config.lx
+        components/
+            App.lx
+            Button.lx
+
+NOTES:
+------
+    - The searcher uses package.path replacing .lua with .lx
+    - Works with dot paths (a.b.c becomes a/b/c.lx)
+    - The loaded module stays in package.loaded normally
+]=]
+
+--------------------------------------------------------------------------------
+-- TEXTOS DE AJUDA - PORTUGUES
+--------------------------------------------------------------------------------
+
+help.pt = {}
+
+help.pt.geral = [=[
 ======================================================================
                           DaviLuaXML - Ajuda                              
 ======================================================================
@@ -61,10 +496,17 @@ Use help("topico") para mais informacoes:
     - core       - Carregamento de arquivos
     - init       - Sistema de require
 
+IDIOMA:
+-------
+Use help.lang("codigo") para mudar o idioma:
+    - en - English
+    - pt - Portugues
+    - es - Espanol
+
 Digite: require("DaviLuaXML.help").list() para listar todos os topicos.
 ]=]
 
-help.topics.sintaxe = [=[
+help.pt.sintaxe = [=[
 ======================================================================
                        DaviLuaXML - Sintaxe XML                           
 ======================================================================
@@ -120,7 +562,7 @@ TRANSFORMACAO:
     -- A funcao recebe: (props, children)
 ]=]
 
-help.topics.parser = [=[
+help.pt.parser = [=[
 ======================================================================
                          DaviLuaXML - Parser                              
 ======================================================================
@@ -171,7 +613,7 @@ ESTRUTURA DO NODE:
     }
 ]=]
 
-help.topics.transform = [==[
+help.pt.transform = [==[
 ======================================================================
                         DaviLuaXML - Transform                            
 ======================================================================
@@ -214,7 +656,7 @@ NOTAS:
     - Expressoes em {} sao avaliadas durante a transformacao
 ]==]
 
-help.topics.elements = [=[
+help.pt.elements = [=[
 ======================================================================
                         DaviLuaXML - Elements                             
 ======================================================================
@@ -256,7 +698,7 @@ METATABLE:
     - __concat: Permite concatenar elementos com ..
 ]=]
 
-help.topics.props = [=[
+help.pt.props = [=[
 ======================================================================
                           DaviLuaXML - Props                              
 ======================================================================
@@ -291,7 +733,7 @@ CONVERSAO DE TIPOS:
     - "texto" continua "texto" (string)
 ]=]
 
-help.topics.errors = [=[
+help.pt.errors = [=[
 ======================================================================
                          DaviLuaXML - Errors                              
 ======================================================================
@@ -337,7 +779,7 @@ EXEMPLO:
     -- [DaviLuaXML] app.lx: linha 1, coluna 10: tag 'div' nao foi fechada...
 ]=]
 
-help.topics.core = [=[
+help.pt.core = [=[
 ======================================================================
                           DaviLuaXML - Core                               
 ======================================================================
@@ -380,7 +822,7 @@ PROCESSO:
     5. Retorna o codigo transformado ou erro
 ]=]
 
-help.topics.init = [=[
+help.pt.init = [=[
 ======================================================================
                           DaviLuaXML - Init                               
 ======================================================================
@@ -425,35 +867,501 @@ NOTAS:
 ]=]
 
 --------------------------------------------------------------------------------
+-- TEXTOS DE AJUDA - ESPANOL
+--------------------------------------------------------------------------------
+
+help.es = {}
+
+help.es.general = [=[
+======================================================================
+                          DaviLuaXML - Ayuda                              
+======================================================================
+
+DaviLuaXML es una biblioteca que permite usar sintaxis XML dentro de codigo Lua.
+Las etiquetas XML se transforman en llamadas de funcion Lua.
+
+INICIO RAPIDO:
+--------------
+    -- 1. Carga DaviLuaXML al inicio del programa
+    require("DaviLuaXML")
+    
+    -- 2. Ahora puedes usar require() con archivos .lx
+    local App = require("mi_componente")  -- carga mi_componente.lx
+
+EJEMPLO BASICO:
+---------------
+    -- archivo: app.lx
+    local function Boton(props, children)
+        return string.format('<button class="%s">%s</button>', 
+            props.class or "", 
+            children[1] or "")
+    end
+    
+    local html = <Boton class="primary">Haz clic aqui</Boton>
+    print(html)  -- <button class="primary">Haz clic aqui</button>
+
+TEMAS DISPONIBLES:
+------------------
+Usa help("tema") para mas informacion:
+    - general    - Esta pagina
+    - sintaxis   - Sintaxis XML soportada
+    - parser     - Modulo de parsing
+    - transform  - Modulo de transformacion
+    - elements   - Creacion de elementos
+    - props      - Manejo de propiedades
+    - errors     - Sistema de errores
+    - core       - Carga de archivos
+    - init       - Sistema de require
+
+IDIOMA:
+-------
+Usa help.lang("codigo") para cambiar el idioma:
+    - en - English
+    - pt - Portugues
+    - es - Espanol
+
+Escribe: require("DaviLuaXML.help").list() para listar todos los temas.
+]=]
+
+help.es.sintaxis = [=[
+======================================================================
+                       DaviLuaXML - Sintaxis XML                           
+======================================================================
+
+ETIQUETAS BASICAS:
+------------------
+    -- Etiqueta self-closing (sin contenido)
+    <MiEtiqueta/>
+    
+    -- Etiqueta con contenido
+    <MiEtiqueta>contenido aqui</MiEtiqueta>
+    
+    -- Etiquetas anidadas
+    <Padre>
+        <Hijo>texto</Hijo>
+    </Padre>
+
+ATRIBUTOS:
+----------
+    -- Strings
+    <Tag nombre="valor"/>
+    
+    -- Sin comillas (valores simples)
+    <Tag activo=true count=5/>
+    
+    -- Expresiones Lua entre llaves
+    <Tag valor={10 + 5} lista={miTabla}/>
+
+EXPRESIONES EN CONTENIDO:
+-------------------------
+    -- Expresiones Lua dentro de etiquetas
+    <Tag>{variable}</Tag>
+    <Tag>{1 + 2 + 3}</Tag>
+    <Tag>{"string"}</Tag>
+    
+    -- Multiples expresiones
+    <Lista>{item1}{item2}{item3}</Lista>
+
+NOMBRES CON PUNTO:
+------------------
+    -- Acceso a modulos/namespaces
+    <html.div class="container"/>
+    <ui.Button onClick={handler}/>
+
+TRANSFORMACION:
+---------------
+    -- El codigo XML se transforma en llamadas de funcion:
+    <Tag prop="valor">texto</Tag>
+    
+    -- Se convierte en:
+    Tag({prop = 'valor'}, {[1] = 'texto'})
+    
+    -- La funcion recibe: (props, children)
+]=]
+
+help.es.parser = [=[
+======================================================================
+                         DaviLuaXML - Parser                              
+======================================================================
+
+El modulo parser convierte strings XML en tablas Lua.
+
+USO:
+----
+    local parser = require("DaviLuaXML.parser")
+    local node, startPos, endPos = parser(codigo)
+
+PARAMETROS:
+-----------
+    codigo (string)  - Codigo que contiene una etiqueta XML
+
+RETORNO:
+--------
+    node (table)     - Tabla que representa el elemento:
+                       { tag = string, props = table, children = array }
+    startPos (number)- Posicion inicial de la etiqueta en el codigo
+    endPos (number)  - Posicion final de la etiqueta en el codigo
+
+EJEMPLO:
+--------
+    local parser = require("DaviLuaXML.parser")
+    
+    local node = parser('<div class="container"><span>texto</span></div>')
+    
+    print(node.tag)              -- "div"
+    print(node.props.class)      -- "container"
+    print(node.children[1].tag)  -- "span"
+    print(node.children[1].children[1])  -- "texto"
+
+ESTRUCTURA DEL NODE:
+--------------------
+    {
+        tag = "div",
+        props = {
+            class = "container"
+        },
+        children = {
+            [1] = {
+                tag = "span",
+                props = {},
+                children = { "texto" }
+            }
+        }
+    }
+]=]
+
+help.es.transform = [==[
+======================================================================
+                        DaviLuaXML - Transform                            
+======================================================================
+
+El modulo transform convierte codigo Lua+XML en codigo Lua puro.
+
+USO:
+----
+    local transform = require("DaviLuaXML.transform").transform
+    local resultado, error = transform(codigo, archivo)
+
+PARAMETROS:
+-----------
+    codigo (string)   - Codigo Lua que contiene etiquetas XML
+    archivo (string)  - Nombre del archivo (opcional, para mensajes de error)
+
+RETORNO:
+--------
+    resultado (string) - Codigo Lua transformado (o nil si hay error)
+    error (string)     - Mensaje de error (o nil si exito)
+
+EJEMPLO:
+--------
+    local transform = require("DaviLuaXML.transform").transform
+    
+    local codigo = [[
+        local function Comp(props)
+            return props.x * 2
+        end
+        local resultado = <Comp x={21}/>
+    ]]
+    
+    local lua_puro = transform(codigo)
+    print(lua_puro)
+
+NOTAS:
+------
+    - Las etiquetas reservadas de Lua (const, close) se preservan
+    - Multiples etiquetas pueden existir en el mismo codigo
+    - Las expresiones en {} se evaluan durante la transformacion
+]==]
+
+help.es.elements = [=[
+======================================================================
+                        DaviLuaXML - Elements                             
+======================================================================
+
+El modulo elements proporciona funciones para crear elementos programaticamente.
+
+USO:
+----
+    local elements = require("DaviLuaXML.elements")
+    local el = elements:createElement(tag, props, children)
+
+PARAMETROS:
+-----------
+    tag (string)      - Nombre de la etiqueta
+    props (table)     - Tabla de propiedades (puede ser nil)
+    children (array)  - Array de hijos (strings, numeros u otros elementos)
+
+RETORNO:
+--------
+    element (table)   - Elemento con metatable configurada
+
+EJEMPLO:
+--------
+    local elements = require("DaviLuaXML.elements")
+    
+    local boton = elements:createElement(
+        "button",
+        { class = "primary", disabled = false },
+        { "Haz clic aqui" }
+    )
+    
+    print(boton.tag)           -- "button"
+    print(boton.props.class)   -- "primary"
+    print(boton.children[1])   -- "Haz clic aqui"
+
+METATABLE:
+----------
+    - __tostring: Convierte elemento a string (tableToString)
+    - __concat: Permite concatenar elementos con ..
+]=]
+
+help.es.props = [=[
+======================================================================
+                          DaviLuaXML - Props                              
+======================================================================
+
+El modulo props convierte entre tablas Lua y strings de atributos XML.
+
+FUNCIONES:
+----------
+
+tableToPropsString(tabla)
+    Convierte una tabla Lua a string de atributos XML.
+    
+    local props = require("DaviLuaXML.props")
+    local s = props.tableToPropsString({ id = "btn1", count = 5 })
+    print(s)  -- 'id="btn1" count="5"'
+
+stringToPropsTable(string)
+    Convierte un string de atributos XML a tabla Lua.
+    Conversion automatica de tipos (number, boolean).
+    
+    local props = require("DaviLuaXML.props")
+    local t = props.stringToPropsTable('count="5" active="true"')
+    print(t.count)   -- 5 (number)
+    print(t.active)  -- true (boolean)
+
+CONVERSION DE TIPOS:
+--------------------
+    String a Tabla:
+    - "123"   se convierte en 123 (number)
+    - "true"  se convierte en true (boolean)
+    - "false" se convierte en false (boolean)
+    - "texto" permanece "texto" (string)
+]=]
+
+help.es.errors = [=[
+======================================================================
+                         DaviLuaXML - Errors                              
+======================================================================
+
+El modulo errors formatea mensajes de error con contexto.
+
+USO:
+----
+    local errors = require("DaviLuaXML.errors")
+
+FUNCIONES:
+----------
+
+errors.format(msg, archivo, codigo, posicion)
+    Formatea un mensaje de error generico.
+    
+errors.unclosedTag(tag, archivo, codigo, posicion)
+    Error para etiqueta no cerrada.
+    
+errors.invalidTag(archivo, codigo, posicion)
+    Error para etiqueta invalida/malformada.
+    
+errors.compilationError(archivo, luaError)
+    Error de compilacion del codigo transformado.
+    
+errors.runtimeError(archivo, luaError)
+    Error de ejecucion del codigo.
+
+errors.getLineInfo(codigo, posicion)
+    Retorna numero de linea y columna para una posicion.
+    
+errors.getLine(codigo, numeroLinea)
+    Retorna el texto de una linea especifica.
+
+EJEMPLO:
+--------
+    local errors = require("DaviLuaXML.errors")
+    
+    local linea, columna = errors.getLineInfo("abc\ndef\nghi", 6)
+    print(linea, columna)  -- 2, 2
+    
+    local msg = errors.unclosedTag("div", "app.lx", codigo, 10)
+    -- [DaviLuaXML] app.lx: linea 1, columna 10: etiqueta 'div' no fue cerrada...
+]=]
+
+help.es.core = [=[
+======================================================================
+                          DaviLuaXML - Core                               
+======================================================================
+
+El modulo core carga y ejecuta archivos .lx directamente.
+
+USO:
+----
+    local core = require("DaviLuaXML.core")
+    local resultado, error = core(ruta)
+
+PARAMETROS:
+-----------
+    ruta (string) - Ruta al archivo .lx
+
+RETORNO:
+--------
+    resultado (string) - Codigo transformado (o nil si hay error)
+    error (string)     - Mensaje de error (o nil si exito)
+
+EJEMPLO:
+--------
+    local core = require("DaviLuaXML.core")
+    
+    -- Ejecuta el archivo y retorna el codigo transformado
+    local codigo, err = core("mi_app.lx")
+    
+    if err then
+        print("Error:", err)
+    else
+        print("Ejecutado exitosamente!")
+    end
+
+PROCESO:
+--------
+    1. Lee el archivo del disco
+    2. Transforma XML a Lua
+    3. Compila el codigo Lua
+    4. Ejecuta el codigo
+    5. Retorna codigo transformado o error
+]=]
+
+help.es.init = [=[
+======================================================================
+                          DaviLuaXML - Init                               
+======================================================================
+
+El modulo init registra un searcher personalizado para require().
+
+USO:
+----
+    require("DaviLuaXML")  -- o require("DaviLuaXML.init")
+    
+    -- Ahora puedes cargar archivos .lx con require()
+    local App = require("mi_componente")
+
+FUNCIONAMIENTO:
+---------------
+    1. Agrega un searcher a package.searchers
+    2. Cuando se llama require(), busca un archivo .lx
+    3. Si lo encuentra, transforma el codigo y retorna el chunk
+
+EJEMPLO:
+--------
+    -- main.lua
+    require("DaviLuaXML")
+    
+    local config = require("config")      -- carga config.lx
+    local App = require("components.App") -- carga components/App.lx
+
+ESTRUCTURA DE PROYECTO:
+-----------------------
+    proyecto/
+        main.lua          -- require("DaviLuaXML") aqui
+        config.lx
+        components/
+            App.lx
+            Button.lx
+
+NOTAS:
+------
+    - El searcher usa package.path reemplazando .lua por .lx
+    - Funciona con rutas con punto (a.b.c se convierte en a/b/c.lx)
+    - El modulo cargado queda en package.loaded normalmente
+]=]
+
+--------------------------------------------------------------------------------
 -- FUNCOES
 --------------------------------------------------------------------------------
 
+--- Obtem o texto de ajuda para um topico no idioma atual.
+--- @param topic string Nome do topico
+--- @return string|nil Texto de ajuda ou nil se nao encontrado
+local function getTopicText(topic)
+    local lang = help.currentLang
+    local langTable = help[lang]
+    
+    if not langTable then
+        langTable = help.en
+    end
+    
+    -- Tentar encontrar o topico diretamente
+    if langTable[topic] then
+        return langTable[topic]
+    end
+    
+    -- Fallback para ingles
+    if help.en[topic] then
+        return help.en[topic]
+    end
+    
+    return nil
+end
+
 --- Lista todos os topicos de ajuda disponiveis.
 function help.list()
-    print("\nTopicos de ajuda disponiveis:")
+    local lang = help.currentLang
+    local langTable = help[lang] or help.en
+    
+    local headers = {
+        en = { title = "\nAvailable help topics:", use = 'Use: require("DaviLuaXML.help")("topic")' },
+        pt = { title = "\nTopicos de ajuda disponiveis:", use = 'Use: require("DaviLuaXML.help")("topico")' },
+        es = { title = "\nTemas de ayuda disponibles:", use = 'Usa: require("DaviLuaXML.help")("tema")' }
+    }
+    
+    local header = headers[lang] or headers.en
+    
+    print(header.title)
     print(string.rep("-", 40))
+    
     local topics = {}
-    for name in pairs(help.topics) do
-        table.insert(topics, name)
+    for name in pairs(langTable) do
+        if type(langTable[name]) == "string" then
+            table.insert(topics, name)
+        end
     end
     table.sort(topics)
+    
     for _, name in ipairs(topics) do
         print("  - " .. name)
     end
+    
     print(string.rep("-", 40))
-    print('Use: require("DaviLuaXML.help")("topico")')
+    print(header.use)
     print("")
 end
 
 --- Exibe a ajuda de um topico especifico.
 --- @param topic string|nil Nome do topico (nil para ajuda geral)
 function help.show(topic)
-    topic = topic or "geral"
-    local text = help.topics[topic]
+    local defaultTopics = { en = "general", pt = "geral", es = "general" }
+    topic = topic or defaultTopics[help.currentLang] or "general"
+    
+    local text = getTopicText(topic)
+    
     if text then
         print(text)
     else
-        print(string.format("\n[DaviLuaXML] Topico '%s' nao encontrado.\n", topic))
+        local msgs = {
+            en = "\n[DaviLuaXML] Topic '%s' not found.\n",
+            pt = "\n[DaviLuaXML] Topico '%s' nao encontrado.\n",
+            es = "\n[DaviLuaXML] Tema '%s' no encontrado.\n"
+        }
+        local msg = msgs[help.currentLang] or msgs.en
+        print(string.format(msg, topic))
         help.list()
     end
 end

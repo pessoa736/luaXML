@@ -12,18 +12,22 @@
         lua DaviLuaXML/test/run_all.lua
 ]]
 
+-- Configurar package.path para encontrar loglua em lua_modules
+local scriptPath = arg[0]
+local projectRoot = scriptPath:match("(.+)/DaviLuaXML/test/run_all%.lua$") or "."
+package.path = projectRoot .. "/lua_modules/share/lua/5.4/?.lua;"
+            .. projectRoot .. "/lua_modules/share/lua/5.4/?/init.lua;"
+            .. projectRoot .. "/?.lua;"
+            .. projectRoot .. "/?/init.lua;"
+            .. package.path
 
 _G.log = _G.log or require("loglua")
+log.live()  -- Ativa modo live para mostrar logs em tempo real
 local logRunner = log.inSection("runner")
 
 logRunner("╔══════════════════════════════════════════════════╗")
 logRunner("║          DaviLuaXML - Suite de Testes            ║")
 logRunner("╚══════════════════════════════════════════════════╝\n")
-
--- Configurar package.path para encontrar os módulos
-local scriptPath = arg[0]
-local projectRoot = scriptPath:match("(.+)/DaviLuaXML/test/run_all%.lua$") or "."
-package.path = projectRoot .. "/?.lua;" .. projectRoot .. "/?/init.lua;" .. package.path
 
 -- Lista de arquivos de teste
 local testFiles = {
@@ -65,9 +69,16 @@ local function runTest(name)
     f:close()
     
     -- Executar teste em um processo separado para isolamento
+    -- Passa o package.path para os subprocessos encontrarem loglua
+    local luaPath = projectRoot .. "/lua_modules/share/lua/5.4/?.lua;"
+                 .. projectRoot .. "/lua_modules/share/lua/5.4/?/init.lua;"
+                 .. projectRoot .. "/?.lua;"
+                 .. projectRoot .. "/?/init.lua"
+    
     local cmd = string.format(
-        'cd "%s" && lua "%s" 2>&1',
+        'cd "%s" && LUA_PATH="%s;;" lua "%s" 2>&1',
         projectRoot,
+        luaPath,
         testPath
     )
     
