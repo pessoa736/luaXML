@@ -41,6 +41,11 @@ local fcst -- defini antes de ser chamado
 --- @param ch any Filho a ser serializado
 --- @return string Representação do filho como string
 local function serializeChild(ch)
+    -- ✅ ADICIONAR: Detectar expressões Lua
+    if type(ch) == "table" and ch.__luaExpr then
+        return ch.code
+    end
+    
     if type(ch) == "table" and ch.tag then
         return fcst(ch)
     elseif type(ch) == "string" then
@@ -55,16 +60,34 @@ end
 ---
 --- @param element table Elemento com { tag, props, children }
 --- @return string Chamada de função como string
-function fcst(element)
-    -- Serializar children como tabela
-    local childrens = "{"
-    for idx, ch in ipairs(element.children) do
-        childrens = childrens.."[".. idx .."] = " .. serializeChild(ch) .. ","
+-- DaviLuaXML.tableToString
+local function tableToString(t, indent)
+    if not t or next(t) == nil then
+        return "{}"
     end
-    childrens = childrens .. "}"
     
-    -- Montar chamada: tag(props, children)
-    return element.tag .. "(" .. require("DaviLuaXML.tableToString")(element.props or {}, false) ..",".. childrens .. ")"
+    local parts = {}
+    for k, v in pairs(t) do
+        local key = type(k) == "string" and k or "[" .. k .. "]"
+        local value
+        
+        -- ✅ ADICIONAR: Detectar expressões Lua
+        if type(v) == "table" and v.__luaExpr then
+            value = v.code  -- Sem aspas!
+        elseif type(v) == "string" then
+            value = string.format("%q", v)
+        elseif type(v) == "number" or type(v) == "boolean" then
+            value = tostring(v)
+        elseif type(v) == "table" then
+            value = tableToString(v, indent)
+        else
+            value = tostring(v)
+        end
+        
+        table.insert(parts, key .. " = " .. value)
+    end
+    
+    return "{" .. table.concat(parts, ", ") .. "}"
 end
 
-return fcst
+return tableToString

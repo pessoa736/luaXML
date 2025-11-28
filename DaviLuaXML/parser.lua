@@ -203,32 +203,13 @@ local function readValue()
                 if depth == 0 then
                     local value = attrString:sub(start, i - 1)
                     i = i + 1
-                    value = trim(value)
-                    -- Avaliar expressão Lua em ambiente seguro
-                    local env = { math = math, tonumber = tonumber }
-                    local fn, _ = load("return " .. value, "attr", "t", env)
-                    if fn then
-                        local ok, result = pcall(fn)
-                        if ok then
-                            return result
-                        end
-                    end
-                    return value
+                    return { __luaexpr=true, code=trim(value) }
                 end
             end
             i = i + 1
         end
         -- Chave não fechada - retorna o que tiver
-        local value = trim(attrString:sub(start))
-        local env = { math = math, tonumber = tonumber }
-        local fn, _ = load("return " .. value, "attr", "t", env)
-        if fn then
-            local ok, result = pcall(fn)
-            if ok then
-                return result
-            end
-        end
-        return value
+        return { __luaexpr=true, code=trim(attrString:sub(start))}
 
     -- Valor simples sem aspas (até próximo espaço)
     else
@@ -394,21 +375,7 @@ local function parseElement(code, globalStart)
                                 local inner = rawContent:sub(braceStart + 1, braceEnd - 1)
                                 inner = trim(inner)
                                 if inner ~= "" then
-                                    -- Avaliar expressão em ambiente seguro
-                                    local env = { math = math, tonumber = tonumber, ipairs = ipairs, string = string }
-                                    local fn = load("return " .. inner, "child", "t", env)
-                                    if fn then
-                                        local ok, value = pcall(fn)
-                                        if ok then
-                                            insert(node.children, value)
-                                        else
-                                            -- Erro na execução: inserir como string
-                                            insert(node.children, inner)
-                                        end
-                                    else
-                                        -- Erro no parse: inserir como string
-                                        insert(node.children, inner)
-                                    end
+                                  insert(node.children, {__luaexpr=true, code=inner})
                                 end
                                 pos = braceEnd + 1
                             else
