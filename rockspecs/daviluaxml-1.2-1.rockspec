@@ -1,5 +1,5 @@
 package = "DaviLuaXML"
-version = "1.2-2"
+version = "1.2-1"
 source = {
    url = "git+https://github.com/pessoa736/DaviLuaXML",
    tag = "1.2-1"
@@ -34,9 +34,9 @@ build = {
       ["DaviLuaXML.elements"] = "DaviLuaXML/elements.lua",
       ["DaviLuaXML.errors"] = "DaviLuaXML/errors.lua",
       ["DaviLuaXML.functionCallToStringTransformer"] = "DaviLuaXML/functionCallToStringTransformer.lua",
+      ["DaviLuaXML.middleware"] = "DaviLuaXML/middleware.lua",
       ["DaviLuaXML.help"] = "DaviLuaXML/help.lua",
       ["DaviLuaXML.init"] = "DaviLuaXML/init.lua",
-      ["DaviLuaXML.middleware"] = "DaviLuaXML/middleware.lua",
       ["DaviLuaXML.parser"] = "DaviLuaXML/parser.lua",
       ["DaviLuaXML.props"] = "DaviLuaXML/props.lua",
       ["DaviLuaXML.readFile"] = "DaviLuaXML/readFile.lua",
