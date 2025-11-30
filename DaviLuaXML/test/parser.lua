@@ -74,9 +74,16 @@ end)
 test("Expressões em chaves", function()
     local node = parser("<num>{1}{2}{3}</num>")
     assert(node.tag == "num", "tag deveria ser 'num'")
-    assert(node.children[1] == 1, "children[1] deveria ser 1")
-    assert(node.children[2] == 2, "children[2] deveria ser 2")
-    assert(node.children[3] == 3, "children[3] deveria ser 3")
+    -- Parser atualmente retorna wrappers para expressões: { __luaexpr = true, code = "..." }
+    assert(type(node.children[1]) == "table" and node.children[1].__luaexpr,
+        "children[1] deveria ser wrapper __luaexpr")
+    assert(node.children[1].code == "1", "children[1].code deveria ser '1'")
+    assert(type(node.children[2]) == "table" and node.children[2].__luaexpr,
+        "children[2] deveria ser wrapper __luaexpr")
+    assert(node.children[2].code == "2", "children[2].code deveria ser '2'")
+    assert(type(node.children[3]) == "table" and node.children[3].__luaexpr,
+        "children[3] deveria ser wrapper __luaexpr")
+    assert(node.children[3].code == "3", "children[3].code deveria ser '3'")
 end)
 
 -- Teste 7: Tag com nome contendo ponto
@@ -90,7 +97,10 @@ end)
 test("Atributos com expressão Lua", function()
     local node = parser("<comp valor={10 + 5}/>")
     assert(node.tag == "comp", "tag deveria ser 'comp'")
-    assert(node.props.valor == 15, "valor deveria ser 15 (10+5)")
+    -- Atributos expressos em chaves são retornados como wrappers __luaexpr
+    assert(type(node.props.valor) == "table" and node.props.valor.__luaexpr,
+        "props.valor deveria ser wrapper __luaexpr")
+    assert(node.props.valor.code == "10 + 5", "props.valor.code deveria ser '10 + 5'")
 end)
 
 -- Teste 9: Conteúdo misto (texto + tags)
@@ -121,7 +131,11 @@ end)
 -- Teste 12: Expressão complexa em chaves
 test("Expressão complexa em chaves", function()
     local node = parser("<calc>{(function() return 42 end)()}</calc>")
-    assert(node.children[1] == 42, "deveria avaliar função e retornar 42")
+    -- Parser retorna wrapper com código da expressão
+    assert(type(node.children[1]) == "table" and node.children[1].__luaexpr,
+        "children[1] deveria ser wrapper __luaexpr")
+    assert(node.children[1].code == "(function() return 42 end)()",
+        "children[1].code deveria conter a expressão da função")
 end)
 
 -- Teste 13: Múltiplos atributos e filhos
@@ -143,7 +157,11 @@ end)
 -- Teste 14: String em expressão
 test("String em expressão", function()
     local node = parser('<div>{"string em chaves"}</div>')
-    assert(node.children[1] == "string em chaves", "deveria preservar string")
+    -- Strings em chaves são mantidas como código dentro do wrapper
+    assert(type(node.children[1]) == "table" and node.children[1].__luaexpr,
+        "children[1] deveria ser wrapper __luaexpr contendo a string")
+    assert(node.children[1].code == '"string em chaves"',
+        'children[1].code deveria ser "\"string em chaves\""')
 end)
 
 -- Teste 15: Whitespace é ignorado em conteúdo vazio

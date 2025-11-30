@@ -1,93 +1,97 @@
 --[[
     DaviLuaXML Function Call to String Transformer (fcst)
     ==================================================
-    
+
     Converte um elemento parseado em uma string de chamada de função Lua.
-    
-    FUNCIONALIDADE:
-    ---------------
-    Transforma a estrutura de elemento { tag, props, children } em uma
-    string que representa uma chamada de função Lua válida.
-    
-    EXEMPLO:
-    --------
-    Entrada (elemento):
-        {
-            tag = "div",
-            props = { class = "container" },
-            children = { "Olá", { tag = "span", props = {}, children = {} } }
-        }
-    
-    Saída (string):
-        'div({class = "container"},{[1] = "Olá",[2] = span({},{})})'
-    
-    USO:
-    ----
-    local fcst = require("DaviLuaXML.functionCallToStringTransformer")
-    local callString = fcst(elemento)
---]]
 
+    Esta implementação trata wrappers de expressão gerados pelo parser
+    -- DaviLuaXML Function Call to String Transformer (fcst)
+    --
+    -- Converte um elemento parseado em uma string de chamada de função Lua.
+    -- Trata wrappers de expressão (`{ __luaexpr = true, code = "..." }`) como código cru.
 
-local fcst -- defini antes de ser chamado
+    local fcst -- será definida abaixo
 
-
-
-
---- Serializa um filho para string.
---- Se for um elemento (tabela com tag), converte recursivamente.
---- Se for string, coloca entre aspas.
---- Outros tipos são convertidos com tostring().
----
---- @param ch any Filho a ser serializado
---- @return string Representação do filho como string
-local function serializeChild(ch)
-    -- ✅ ADICIONAR: Detectar expressões Lua
-    if type(ch) == "table" and ch.__luaExpr then
-        return ch.code
-    end
-    
-    if type(ch) == "table" and ch.tag then
-        return fcst(ch)
-    elseif type(ch) == "string" then
-        return string.format("'%s'", ch)
-    else
-        return tostring(ch)
-    end
-end
-
---- Converte um elemento em string de chamada de função.
---- Formato: tag(props, children)
----
---- @param element table Elemento com { tag, props, children }
---- @return string Chamada de função como string
--- DaviLuaXML.tableToString
-local function tableToString(t, indent)
-    if not t or next(t) == nil then
-        return "{}"
-    end
-    
-    local parts = {}
-    for k, v in pairs(t) do
-        local key = type(k) == "string" and k or "[" .. k .. "]"
-        local value
-        
-        -- ✅ ADICIONAR: Detectar expressões Lua
-        if type(v) == "table" and v.__luaExpr then
-            value = v.code  -- Sem aspas!
+    local function serializePropValue(v)
+        if type(v) == "table" and v.__luaexpr then
+            return v.code
         elseif type(v) == "string" then
-            value = string.format("%q", v)
-        elseif type(v) == "number" or type(v) == "boolean" then
-            value = tostring(v)
-        elseif type(v) == "table" then
-            value = tableToString(v, indent)
-        else
-            value = tostring(v)
-        end
-        
-        table.insert(parts, key .. " = " .. value)
-    end
-    
-    return "{" .. table.concat(parts, ", ") .. "}"
-end
+            --[[
+                DaviLuaXML Function Call to String Transformer (fcst)
+                ==================================================
 
-return tableToString
+                Converte um elemento parseado em uma string de chamada de função Lua.
+
+                Esta implementação trata wrappers de expressão gerados pelo parser
+                (`{ __luaexpr = true, code = "..." }`) como código cru: a string
+                `code` é passada adiante sem aspas para ser avaliada apenas quando o
+                código transformado for executado.
+            ]]
+
+            local fcst -- será definida abaixo
+
+            local function serializePropValue(v)
+                if type(v) == "table" and v.__luaexpr then
+                    return v.code
+                elseif type(v) == "string" then
+                    return string.format("%q", v)
+                elseif type(v) == "number" or type(v) == "boolean" then
+                    return tostring(v)
+                elseif type(v) == "table" then
+                    local parts = {}
+                    for k, val in pairs(v) do
+                        local key = type(k) == "string" and k or ("[" .. k .. "]")
+                        table.insert(parts, key .. " = " .. serializePropValue(val))
+                    end
+                    return "{" .. table.concat(parts, ", ") .. "}"
+                else
+                    return tostring(v)
+                end
+            end
+
+            local function serializeChild(ch)
+                if type(ch) == "table" and ch.__luaexpr then
+                    return ch.code
+                elseif type(ch) == "table" and ch.tag then
+                    return fcst(ch)
+                elseif type(ch) == "string" then
+                    -- usar aspas simples no formato esperado pelos testes; escapar aspas simples internas
+                    local s = tostring(ch):gsub("'", "\\'")
+                    return "'" .. s .. "'"
+                else
+                    return tostring(ch)
+                end
+            end
+
+            local function propsToString(props)
+                if not props or next(props) == nil then return "{}" end
+                local parts = {}
+                for k, v in pairs(props) do
+                    local key = tostring(k)
+                    table.insert(parts, key .. " = " .. serializePropValue(v))
+                end
+                return "{" .. table.concat(parts, ", ") .. "}"
+            end
+
+            local function childrenToString(children)
+                if not children or #children == 0 then return "{}" end
+                local parts = {}
+                for i = 1, #children do
+                    local val = serializeChild(children[i])
+                    table.insert(parts, "[" .. i .. "] = " .. val)
+                end
+                return "{" .. table.concat(parts, ",") .. "}"
+            end
+
+            fcst = function(element)
+                local tag = element.tag or element.name or "unknown"
+                local props = element.props or element.attrs or {}
+                local children = element.children or {}
+
+                local propsStr = propsToString(props)
+                local childrenStr = childrenToString(children)
+
+                return tag .. "(" .. propsStr .. ", " .. childrenStr .. ")"
+            end
+
+            return fcst

@@ -39,7 +39,19 @@
 --]]
 
 local parser = require("DaviLuaXML.parser")
-local fcst = require("DaviLuaXML.functionCallToStringTransformer")
+
+-- Preferir carregar a versão local do transformer (no workspace) quando disponível.
+local fcst
+do
+  local local_path = "DaviLuaXML/functionCallToStringTransformer.lua"
+  local f = io.open(local_path, "r")
+  if f then
+    f:close()
+    fcst = assert(dofile(local_path))
+  else
+    fcst = require("DaviLuaXML.functionCallToStringTransformer")
+  end
+end
 local errors = require("DaviLuaXML.errors")
 
 if not _G.log then _G.log = require("loglua") end

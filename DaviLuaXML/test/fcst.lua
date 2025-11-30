@@ -2,7 +2,9 @@
     Testes do módulo functionCallToStringTransformer.lua (fcst)
 ]]
 
-local fcst = require("DaviLuaXML.functionCallToStringTransformer")
+-- Carrega a versão local do módulo para garantir que os testes usem
+-- a implementação do workspace (evita carregar uma cópia instalada globalmente).
+local fcst = dofile("DaviLuaXML/functionCallToStringTransformer.lua")
 _G.log = _G.log or require("loglua")
 local logTest = log.inSection("tests")
 

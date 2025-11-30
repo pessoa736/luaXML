@@ -3,7 +3,9 @@
 ]]
 ---@diagnostic disable: need-check-nil
 
-local transform = require("DaviLuaXML.transform").transform
+-- Carrega o transform do workspace diretamente para evitar conflito com uma
+-- possível versão instalada globalmente.
+local transform = dofile("DaviLuaXML/transform.lua").transform
 _G.log = _G.log or require("loglua")
 local logTest = log.inSection("tests")
 
